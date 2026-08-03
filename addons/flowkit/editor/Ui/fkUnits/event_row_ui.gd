@@ -373,30 +373,88 @@ func _update_conditions() -> void:
 		conditions_container.remove_child(child)
 		child.queue_free()
 
-	for i in range(e.conditions.size()):
-		var condition_data: FKConditionUnit = e.conditions[i]
-		# Visual OR separator between AND-groups
-		if i > 0 and condition_data and condition_data.or_with_previous:
-			conditions_container.add_child(_make_or_separator())
-		var item: FKConditionUnitUi = CONDITION_ITEM_SCENE.instantiate()
-		item.legitimize(condition_data, _globals)
-		_connect_condition_item_signals(item)
-		conditions_container.add_child(item)
+	# Build visual groups: OR chains AND'd together
+	# Group starts when or_with_previous is false (or first item).
+	var groups: Array = []  # Array of Array[FKConditionUnit]
+	var current_group: Array = []
+	for cond in e.conditions:
+		if cond == null:
+			continue
+		if current_group.is_empty() or not cond.or_with_previous:
+			if not current_group.is_empty():
+				groups.append(current_group)
+			current_group = [cond]
+		else:
+			current_group.append(cond)
+	if not current_group.is_empty():
+		groups.append(current_group)
 
-func _make_or_separator() -> Control:
+	for gi in range(groups.size()):
+		if gi > 0:
+			conditions_container.add_child(_make_logic_separator("AND", Color(0.95, 0.7, 0.35)))
+		var group: Array = groups[gi]
+		var group_panel := _make_condition_group_panel(group.size() > 1)
+		var group_box: VBoxContainer = group_panel.get_node("Margin/VBox")
+		for ci in range(group.size()):
+			if ci > 0:
+				group_box.add_child(_make_logic_separator("OR", Color(0.45, 0.85, 1.0)))
+			var condition_data: FKConditionUnit = group[ci]
+			var item: FKConditionUnitUi = CONDITION_ITEM_SCENE.instantiate()
+			item.legitimize(condition_data, _globals)
+			_connect_condition_item_signals(item)
+			group_box.add_child(item)
+		conditions_container.add_child(group_panel)
+
+func _make_condition_group_panel(is_or_group: bool) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var style := StyleBoxFlat.new()
+	if is_or_group:
+		style.bg_color = Color(0.12, 0.2, 0.28, 0.55)
+		style.border_color = Color(0.35, 0.7, 0.9, 0.65)
+	else:
+		style.bg_color = Color(0.16, 0.16, 0.18, 0.35)
+		style.border_color = Color(0.4, 0.4, 0.45, 0.4)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 4
+	style.content_margin_right = 4
+	style.content_margin_top = 3
+	style.content_margin_bottom = 3
+	panel.add_theme_stylebox_override("panel", style)
+	var margin := MarginContainer.new()
+	margin.name = "Margin"
+	margin.add_theme_constant_override("margin_left", 2)
+	margin.add_theme_constant_override("margin_right", 2)
+	margin.add_theme_constant_override("margin_top", 2)
+	margin.add_theme_constant_override("margin_bottom", 2)
+	panel.add_child(margin)
+	var vbox := VBoxContainer.new()
+	vbox.name = "VBox"
+	vbox.add_theme_constant_override("separation", 2)
+	margin.add_child(vbox)
+	if is_or_group:
+		var tag := Label.new()
+		tag.text = "OR group  (any may pass)"
+		tag.add_theme_font_size_override("font_size", 9)
+		tag.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0, 0.85))
+		vbox.add_child(tag)
+	return panel
+
+func _make_logic_separator(text: String, color: Color) -> Control:
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var line_l := ColorRect.new()
-	line_l.custom_minimum_size = Vector2(24, 1)
-	line_l.color = Color(0.35, 0.65, 0.85, 0.7)
+	line_l.custom_minimum_size = Vector2(16, 1)
+	line_l.color = Color(color.r, color.g, color.b, 0.55)
 	line_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var lbl := Label.new()
-	lbl.text = " OR "
-	lbl.add_theme_color_override("font_color", Color(0.45, 0.85, 1.0, 0.95))
+	lbl.text = " %s " % text
+	lbl.add_theme_color_override("font_color", color)
 	lbl.add_theme_font_size_override("font_size", 10)
 	var line_r := ColorRect.new()
-	line_r.custom_minimum_size = Vector2(24, 1)
-	line_r.color = Color(0.35, 0.65, 0.85, 0.7)
+	line_r.custom_minimum_size = Vector2(16, 1)
+	line_r.color = Color(color.r, color.g, color.b, 0.55)
 	line_r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line_r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(line_l)

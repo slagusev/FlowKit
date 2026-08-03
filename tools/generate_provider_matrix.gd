@@ -51,7 +51,10 @@ func _run() -> void:
 		print("[generate_provider_matrix] Wrote ", OUT_PATH, " (", text.length(), " chars)")
 	else:
 		push_error("Failed to write " + OUT_PATH)
+	# Force exit even if autoloads keep the process alive
 	quit()
+	OS.set_exit_code(0)
+	call_deferred("quit")
 
 func _scan(path: String) -> Array:
 	var out: Array = []

@@ -6,6 +6,8 @@ class_name FKSheetMetaPanel
 signal meta_changed
 signal add_subsheet_action_requested(subsheet_index: int)
 signal edit_subsheet_action_requested(subsheet_index: int, action_index: int)
+signal retarget_subsheet_action_requested(subsheet_index: int, action_index: int)
+signal rechoose_subsheet_action_requested(subsheet_index: int, action_index: int)
 
 var globals: FKEditorGlobals
 
@@ -128,6 +130,16 @@ func _build() -> void:
 	aedit.text = "Edit"
 	aedit.pressed.connect(_on_edit_sub_action)
 	arow.add_child(aedit)
+	var atarget := Button.new()
+	atarget.text = "Retarget"
+	atarget.tooltip_text = "Pick a different target node for the selected action"
+	atarget.pressed.connect(_on_retarget_sub_action)
+	arow.add_child(atarget)
+	var arechoose := Button.new()
+	arechoose.text = "Change"
+	arechoose.tooltip_text = "Pick a different action type (same or new node)"
+	arechoose.pressed.connect(_on_rechoose_sub_action)
+	arow.add_child(arechoose)
 	var adel := Button.new()
 	adel.text = "Remove"
 	adel.pressed.connect(_on_del_sub_action)
@@ -286,6 +298,22 @@ func _on_edit_sub_action() -> void:
 	if sel.is_empty():
 		return
 	edit_subsheet_action_requested.emit(_selected_sub_index, sel[0])
+
+func _on_retarget_sub_action() -> void:
+	if _selected_sub_index < 0:
+		return
+	var sel := _sub_actions_list.get_selected_items()
+	if sel.is_empty():
+		return
+	retarget_subsheet_action_requested.emit(_selected_sub_index, sel[0])
+
+func _on_rechoose_sub_action() -> void:
+	if _selected_sub_index < 0:
+		return
+	var sel := _sub_actions_list.get_selected_items()
+	if sel.is_empty():
+		return
+	rechoose_subsheet_action_requested.emit(_selected_sub_index, sel[0])
 
 func _on_sub_action_activated(index: int) -> void:
 	if _selected_sub_index < 0:

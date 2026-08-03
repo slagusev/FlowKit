@@ -63,7 +63,7 @@
             <span class="badge badge-blue">Godot 4.5+</span>
             <span class="badge badge-green">MIT License</span>
             <span class="badge badge-purple">Open Source Fork</span>
-            <span class="badge badge-blue">v2.1</span>
+            <span class="badge badge-blue">v2.7</span>
           </div>
           <div class="hero-cta">
             <a
@@ -158,7 +158,23 @@
             <p>
               GDScript expressions with <code>node</code>,
               <code>scene_root</code>, <code>system</code>, <code>delta</code>,
-              and global variables.
+              sheet vars (<code>s_score</code>), and <code>current</code> for For Each.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📋</div>
+            <h3>Sheet Vars &amp; Subsheets</h3>
+            <p>
+              Local variables panel, reusable subsheets, Call Subsheet and For
+              Each over groups/classes.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">★</div>
+            <h3>Favorites &amp; Filter</h3>
+            <p>
+              Star events/conditions/actions, Ctrl+F sheet filter, OR condition
+              groups with visual AND/OR separators.
             </p>
           </div>
         </div>
@@ -167,38 +183,49 @@
 
     <section id="whats-new" class="section">
       <div class="container">
-        <h2>What's New in This Fork</h2>
+        <h2>What's New in This Fork (v2.7)</h2>
         <div class="changelog-grid">
           <div class="changelog-card">
-            <h3>Stability</h3>
+            <h3>Logic &amp; data</h3>
             <ul>
-              <li>Per-invocation multi-frame action waits (no shared hang flag)</li>
-              <li>Deep-copy of nested branches on drag / duplicate</li>
-              <li>On Ready uses <code>Node.ready</code> correctly</li>
-              <li>Wait For Input validates bindings and times out safely</li>
-              <li>Global variables always available in expressions</li>
+              <li>OR condition groups with visual AND / OR separators</li>
+              <li>Sheet-local variables + Set / Compare actions</li>
+              <li>Subsheets with full action editor, Retarget / Change</li>
+              <li>For Each (group/class) + <code>current</code> in expressions</li>
+              <li>Event flags: Enabled, Trigger Once, Once While True</li>
             </ul>
           </div>
           <div class="changelog-card">
-            <h3>UX</h3>
+            <h3>Editor UX</h3>
             <ul>
-              <li>Search by name, id, and description in selectors</li>
-              <li>Auto-focus search; Enter confirms first match</li>
-              <li>Alphabetical provider lists</li>
-              <li>Scene-named event sheet files</li>
+              <li>★ Favorites for actions, events, conditions</li>
+              <li>Sheet filter (Ctrl+F) with jump-to-match</li>
+              <li>Dirty indicator; project-local sheet paths</li>
+              <li>Expression live validate + sheet-var snippets</li>
+              <li>Debug overlay (F4) in debug builds</li>
             </ul>
           </div>
           <div class="changelog-card">
-            <h3>New Providers</h3>
+            <h3>Providers &amp; quality</h3>
             <ul>
-              <li>Area2D: On Body Entered / Exited</li>
-              <li>Is on Wall / Ceiling, Distance, Random Chance</li>
-              <li>Tween Position, Look At, Queue Free</li>
-              <li>Create Instance, Play Animation</li>
-              <li>Define Function / Call Function</li>
+              <li>160+ actions, 50+ conditions, 50+ events (2D / 3D / UI)</li>
+              <li>Provider matrix doc + generator script</li>
+              <li>O(1) provider registry index</li>
+              <li>GitHub Actions GUT CI</li>
+              <li>Stability fixes vs upstream (waits, deep-copy, On Ready)</li>
             </ul>
           </div>
         </div>
+        <p class="section-intro" style="margin-top: 1.5rem">
+          Full history:
+          <a href="https://github.com/slagusev/FlowKit/blob/master/CHANGELOG.md" target="_blank" rel="noopener"
+            >CHANGELOG.md</a
+          >
+          · Provider list:
+          <a href="https://github.com/slagusev/FlowKit/blob/master/docs/PROVIDER_MATRIX.md" target="_blank" rel="noopener"
+            >PROVIDER_MATRIX.md</a
+          >
+        </p>
       </div>
     </section>
 

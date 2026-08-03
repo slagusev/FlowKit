@@ -2,6 +2,16 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 2.7.0 — Visual AND/OR groups, subsheet retarget, stricter CI, site update
+
+### Added
+- **Visual AND/OR condition groups** in the event sheet (OR groups boxed, AND between groups)
+- Subsheet action **Retarget** (new node) and **Change** (new node + action type)
+- Website updated for v2.7 feature set
+
+### Improved
+- CI downloads Godot 4.4.1, runs import + GUT without `continue-on-error` on tests
+
 ## 2.6.0 — Favorites everywhere, subsheet node pick, CI, provider matrix
 
 ### Added

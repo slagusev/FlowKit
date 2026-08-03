@@ -115,6 +115,8 @@ func _ensure_sheet_meta_panel() -> void:
 		_sheet_meta_panel.meta_changed.connect(_on_sheet_meta_changed)
 		_sheet_meta_panel.add_subsheet_action_requested.connect(_on_add_subsheet_action)
 		_sheet_meta_panel.edit_subsheet_action_requested.connect(_on_edit_subsheet_action)
+		_sheet_meta_panel.retarget_subsheet_action_requested.connect(_on_retarget_subsheet_action)
+		_sheet_meta_panel.rechoose_subsheet_action_requested.connect(_on_rechoose_subsheet_action)
 		hbox.add_child(_sheet_meta_panel)
 
 var pending_subsheet_index: int = -1
@@ -157,6 +159,28 @@ func _on_edit_subsheet_action(subsheet_index: int, action_index: int) -> void:
 		expression_modal.populate_inputs(pending_node_path, act.action_id, inputs, act.inputs)
 		_popup_centered_on_editor(expression_modal)
 	# else nothing to edit
+
+func _on_retarget_subsheet_action(subsheet_index: int, action_index: int) -> void:
+	if subsheet_index < 0 or action_index < 0:
+		return
+	pending_subsheet_index = subsheet_index
+	pending_subsheet_action_index = action_index
+	pending_block_type = "subsheet_action_retarget"
+	var scene_root := editor_interface.get_edited_scene_root() if editor_interface else null
+	if scene_root:
+		select_node_modal.populate_from_scene(scene_root)
+		_popup_centered_on_editor(select_node_modal)
+
+func _on_rechoose_subsheet_action(subsheet_index: int, action_index: int) -> void:
+	if subsheet_index < 0 or action_index < 0:
+		return
+	pending_subsheet_index = subsheet_index
+	pending_subsheet_action_index = action_index
+	pending_block_type = "subsheet_action_rechoose"
+	var scene_root := editor_interface.get_edited_scene_root() if editor_interface else null
+	if scene_root:
+		select_node_modal.populate_from_scene(scene_root)
+		_popup_centered_on_editor(select_node_modal)
 
 func _ensure_dirty_label() -> void:
 	if _dirty_label and is_instance_valid(_dirty_label):
@@ -1455,9 +1479,11 @@ func _on_node_selected(node_path: String, node_class: String) -> void:
 		"condition", "condition_replace":
 			select_condition_modal.populate_conditions(node_path, node_class)
 			_popup_centered_on_editor(select_condition_modal)
-		"action", "action_replace", "subsheet_action":
+		"action", "action_replace", "subsheet_action", "subsheet_action_rechoose":
 			select_action_modal.populate_actions(node_path, node_class)
 			_popup_centered_on_editor(select_action_modal)
+		"subsheet_action_retarget":
+			_apply_subsheet_retarget(node_path)
 		"branch_condition", "branch_condition_edit", "elseif_condition":
 			select_condition_modal.populate_conditions(node_path, node_class)
 			_popup_centered_on_editor(select_condition_modal)
@@ -1518,6 +1544,8 @@ func _on_action_selected_in_modal(node_path: String, action_id: String, inputs: 
 			_finalize_branch_action_creation({})
 		elif pending_block_type == "subsheet_action":
 			_finalize_subsheet_action({})
+		elif pending_block_type == "subsheet_action_rechoose":
+			_finalize_subsheet_action_rechoose({})
 		else:
 			_finalize_action_creation({})
 
@@ -1540,6 +1568,8 @@ func _on_expressions_confirmed(_node_path: String, _id: String, expressions: Dic
 			_finalize_subsheet_action(expressions)
 		"subsheet_action_edit":
 			_update_subsheet_action(expressions)
+		"subsheet_action_rechoose":
+			_finalize_subsheet_action_rechoose(expressions)
 		"event_edit":
 			_update_event_inputs(expressions)
 		"condition_edit":
@@ -1798,6 +1828,40 @@ func _update_subsheet_action(expressions: Dictionary) -> void:
 		_reset_workflow()
 		return
 	var act: FKActionUnit = sub.actions[pending_subsheet_action_index]
+	act.inputs = expressions.duplicate(true)
+	editor_globals.sheet_dirty = true
+	_refresh_sheet_meta_panel()
+	_update_dirty_indicator()
+	_reset_workflow()
+	_save_sheet()
+
+func _apply_subsheet_retarget(node_path: String) -> void:
+	if pending_subsheet_index < 0 or pending_subsheet_index >= editor_globals.sheet_subsheets.size():
+		_reset_workflow()
+		return
+	var sub = editor_globals.sheet_subsheets[pending_subsheet_index]
+	if pending_subsheet_action_index < 0 or pending_subsheet_action_index >= sub.actions.size():
+		_reset_workflow()
+		return
+	var act: FKActionUnit = sub.actions[pending_subsheet_action_index]
+	act.target_node = NodePath(node_path)
+	editor_globals.sheet_dirty = true
+	_refresh_sheet_meta_panel()
+	_update_dirty_indicator()
+	_reset_workflow()
+	_save_sheet()
+
+func _finalize_subsheet_action_rechoose(expressions: Dictionary) -> void:
+	if pending_subsheet_index < 0 or pending_subsheet_index >= editor_globals.sheet_subsheets.size():
+		_reset_workflow()
+		return
+	var sub = editor_globals.sheet_subsheets[pending_subsheet_index]
+	if pending_subsheet_action_index < 0 or pending_subsheet_action_index >= sub.actions.size():
+		_reset_workflow()
+		return
+	var act: FKActionUnit = sub.actions[pending_subsheet_action_index]
+	act.action_id = pending_id
+	act.target_node = NodePath(pending_node_path)
 	act.inputs = expressions.duplicate(true)
 	editor_globals.sheet_dirty = true
 	_refresh_sheet_meta_panel()

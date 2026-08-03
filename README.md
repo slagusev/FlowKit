@@ -12,7 +12,16 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - This fork: https://github.com/slagusev/FlowKit  
 - Site assets (fork): `website/` in this repo  
 
-## What's different in this fork (2.6)
+## What's different in this fork (2.7)
+
+- Visual **AND / OR condition groups** in the sheet UI
+- Subsheet actions: **Retarget** node, **Change** action type
+- Stricter CI (Godot 4.4.1 + GUT must pass)
+- Website docs updated
+
+---
+
+## Earlier (2.6)
 
 - Favorites for **actions, events, and conditions**
 - Subsheet actions: pick **any node**, then action

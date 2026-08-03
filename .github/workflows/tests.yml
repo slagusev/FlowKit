@@ -8,38 +8,57 @@ on:
 
 jobs:
   gut:
+    name: GUT unit tests (Godot 4.4+)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Godot
-        uses: chickensoft-games/setup-godot@v2
+      - name: Cache Godot binary
+        id: cache-godot
+        uses: actions/cache@v4
         with:
-          version: 4.3.0
-          use-dotnet: false
-          include-templates: false
+          path: ~/godot-bin
+          key: godot-4.4.1-stable-linux
 
-      # Fallback if setup-godot pin fails — try official binary
-      - name: Download Godot (fallback)
-        if: failure()
+      - name: Download Godot 4.4.1
+        if: steps.cache-godot.outputs.cache-hit != 'true'
         run: |
-          curl -L -o godot.zip "https://github.com/godotengine/godot-builds/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip"
-          unzip -o godot.zip
-          chmod +x Godot_v4.3-stable_linux.x86_64
-          sudo mv Godot_v4.3-stable_linux.x86_64 /usr/local/bin/godot
+          mkdir -p ~/godot-bin
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip"
+          unzip -o /tmp/godot.zip -d ~/godot-bin
+          chmod +x ~/godot-bin/Godot_v4.4.1-stable_linux.x86_64
+          ln -sf ~/godot-bin/Godot_v4.4.1-stable_linux.x86_64 ~/godot-bin/godot
+
+      - name: Link godot on PATH
+        run: |
+          chmod +x ~/godot-bin/Godot_v4.4.1-stable_linux.x86_64 || true
+          ln -sf ~/godot-bin/Godot_v4.4.1-stable_linux.x86_64 ~/godot-bin/godot
+          echo "$HOME/godot-bin" >> $GITHUB_PATH
+          ~/godot-bin/godot --version
 
       - name: Import project
-        run: godot --headless --path . --import || true
-        continue-on-error: true
+        run: godot --headless --path . --import
+        timeout-minutes: 10
 
       - name: Run GUT unit tests
         run: |
+          set -e
           godot --headless --path . -s addons/gut/gut_cmdln.gd \
             -gdir=res://tests \
             -ginclude_subdirs \
-            -gexit
-        continue-on-error: true
+            -gexit \
+            -glog=1
+        timeout-minutes: 15
 
       - name: Generate provider matrix
-        run: godot --headless --path . -s res://tools/generate_provider_matrix.gd || true
-        continue-on-error: true
+        run: godot --headless --path . -s res://tools/generate_provider_matrix.gd
+        timeout-minutes: 5
+
+      - name: Upload provider matrix artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-matrix
+          path: docs/PROVIDER_MATRIX.md
+          if-no-files-found: ignore
