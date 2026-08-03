@@ -113,7 +113,45 @@ func _ensure_sheet_meta_panel() -> void:
 		_sheet_meta_panel = FKSheetMetaPanel.new()
 		_sheet_meta_panel.setup(editor_globals)
 		_sheet_meta_panel.meta_changed.connect(_on_sheet_meta_changed)
+		_sheet_meta_panel.add_subsheet_action_requested.connect(_on_add_subsheet_action)
+		_sheet_meta_panel.edit_subsheet_action_requested.connect(_on_edit_subsheet_action)
 		hbox.add_child(_sheet_meta_panel)
+
+var pending_subsheet_index: int = -1
+var pending_subsheet_action_index: int = -1
+
+func _on_add_subsheet_action(subsheet_index: int) -> void:
+	pending_subsheet_index = subsheet_index
+	pending_subsheet_action_index = -1
+	pending_block_type = "subsheet_action"
+	pending_node_path = "System"
+	# Pick action for System (most subsheet actions are system-level; user can still pick node later via path)
+	select_action_modal.populate_actions("System", "System")
+	_popup_centered_on_editor(select_action_modal)
+
+func _on_edit_subsheet_action(subsheet_index: int, action_index: int) -> void:
+	if subsheet_index < 0 or subsheet_index >= editor_globals.sheet_subsheets.size():
+		return
+	var sub = editor_globals.sheet_subsheets[subsheet_index]
+	if action_index < 0 or action_index >= sub.actions.size():
+		return
+	var act: FKActionUnit = sub.actions[action_index]
+	pending_subsheet_index = subsheet_index
+	pending_subsheet_action_index = action_index
+	pending_block_type = "subsheet_action_edit"
+	pending_node_path = str(act.target_node)
+	pending_id = act.action_id
+	# Find inputs from registry
+	var inputs: Array = []
+	if editor_globals.registry:
+		for p in editor_globals.registry.action_providers:
+			if p.has_method("get_id") and p.get_id() == act.action_id:
+				inputs = p.get_inputs()
+				break
+	if inputs.size() > 0:
+		expression_modal.populate_inputs(pending_node_path, act.action_id, inputs, act.inputs)
+		_popup_centered_on_editor(expression_modal)
+	# else nothing to edit
 
 func _ensure_dirty_label() -> void:
 	if _dirty_label and is_instance_valid(_dirty_label):
@@ -1473,6 +1511,8 @@ func _on_action_selected_in_modal(node_path: String, action_id: String, inputs: 
 			_replace_action({})
 		elif pending_block_type == "branch_action":
 			_finalize_branch_action_creation({})
+		elif pending_block_type == "subsheet_action":
+			_finalize_subsheet_action({})
 		else:
 			_finalize_action_creation({})
 
@@ -1491,6 +1531,10 @@ func _on_expressions_confirmed(_node_path: String, _id: String, expressions: Dic
 			_finalize_condition_creation(expressions)
 		"action":
 			_finalize_action_creation(expressions)
+		"subsheet_action":
+			_finalize_subsheet_action(expressions)
+		"subsheet_action_edit":
+			_update_subsheet_action(expressions)
 		"event_edit":
 			_update_event_inputs(expressions)
 		"condition_edit":
@@ -1724,9 +1768,43 @@ func _replace_action(expressions: Dictionary) -> void:
 	"""Replace action is not used in GDevelop-style layout."""
 	_reset_workflow()
 
+func _finalize_subsheet_action(expressions: Dictionary) -> void:
+	if pending_subsheet_index < 0 or pending_subsheet_index >= editor_globals.sheet_subsheets.size():
+		_reset_workflow()
+		return
+	var sub = editor_globals.sheet_subsheets[pending_subsheet_index]
+	var act := FKActionUnit.new()
+	act.action_id = pending_id
+	act.target_node = NodePath(pending_node_path)
+	act.inputs = expressions.duplicate(true)
+	sub.actions.append(act)
+	editor_globals.sheet_dirty = true
+	_refresh_sheet_meta_panel()
+	_update_dirty_indicator()
+	_reset_workflow()
+	_save_sheet()
+
+func _update_subsheet_action(expressions: Dictionary) -> void:
+	if pending_subsheet_index < 0 or pending_subsheet_index >= editor_globals.sheet_subsheets.size():
+		_reset_workflow()
+		return
+	var sub = editor_globals.sheet_subsheets[pending_subsheet_index]
+	if pending_subsheet_action_index < 0 or pending_subsheet_action_index >= sub.actions.size():
+		_reset_workflow()
+		return
+	var act: FKActionUnit = sub.actions[pending_subsheet_action_index]
+	act.inputs = expressions.duplicate(true)
+	editor_globals.sheet_dirty = true
+	_refresh_sheet_meta_panel()
+	_update_dirty_indicator()
+	_reset_workflow()
+	_save_sheet()
+
 func _reset_workflow() -> void:
 	"""Clear workflow state."""
 	pending_block_type = ""
+	pending_subsheet_index = -1
+	pending_subsheet_action_index = -1
 	pending_node_path = ""
 	pending_id = ""
 	pending_target_row = null

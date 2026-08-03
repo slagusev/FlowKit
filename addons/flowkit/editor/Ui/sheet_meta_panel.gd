@@ -1,9 +1,11 @@
 @tool
 extends PanelContainer
 class_name FKSheetMetaPanel
-## Side panel for sheet variables + subsheet names.
+## Side panel: sheet variables, subsheets, and subsheet action list editing.
 
 signal meta_changed
+signal add_subsheet_action_requested(subsheet_index: int)
+signal edit_subsheet_action_requested(subsheet_index: int, action_index: int)
 
 var globals: FKEditorGlobals
 
@@ -13,6 +15,10 @@ var _type_option: OptionButton
 var _default_edit: LineEdit
 var _sub_list: ItemList
 var _sub_name_edit: LineEdit
+var _sub_actions_list: ItemList
+var _sub_actions_label: Label
+
+var _selected_sub_index: int = -1
 
 const TYPES := ["int", "float", "bool", "string", "Variant"]
 
@@ -22,7 +28,7 @@ func setup(editor_globals: FKEditorGlobals) -> void:
 	refresh()
 
 func _build() -> void:
-	custom_minimum_size = Vector2(260, 0)
+	custom_minimum_size = Vector2(280, 0)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.14, 0.15, 0.18, 1)
 	style.content_margin_left = 8
@@ -33,6 +39,7 @@ func _build() -> void:
 	
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 6)
+	root.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_child(root)
 	
 	var title := Label.new()
@@ -41,8 +48,9 @@ func _build() -> void:
 	root.add_child(title)
 	
 	_vars_list = ItemList.new()
-	_vars_list.custom_minimum_size = Vector2(0, 100)
+	_vars_list.custom_minimum_size = Vector2(0, 80)
 	_vars_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_vars_list.item_selected.connect(_on_var_selected)
 	root.add_child(_vars_list)
 	
 	var row := HBoxContainer.new()
@@ -71,8 +79,7 @@ func _build() -> void:
 	del_btn.pressed.connect(_on_del_var)
 	btn_row.add_child(del_btn)
 	
-	var sep := HSeparator.new()
-	root.add_child(sep)
+	root.add_child(HSeparator.new())
 	
 	var st := Label.new()
 	st.text = "Subsheets"
@@ -80,7 +87,8 @@ func _build() -> void:
 	root.add_child(st)
 	
 	_sub_list = ItemList.new()
-	_sub_list.custom_minimum_size = Vector2(0, 80)
+	_sub_list.custom_minimum_size = Vector2(0, 70)
+	_sub_list.item_selected.connect(_on_sub_selected)
 	root.add_child(_sub_list)
 	
 	_sub_name_edit = LineEdit.new()
@@ -98,8 +106,43 @@ func _build() -> void:
 	sdel.pressed.connect(_on_del_sub)
 	srow.add_child(sdel)
 	
+	_sub_actions_label = Label.new()
+	_sub_actions_label.text = "Subsheet actions (select a subsheet)"
+	_sub_actions_label.add_theme_font_size_override("font_size", 11)
+	_sub_actions_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
+	root.add_child(_sub_actions_label)
+	
+	_sub_actions_list = ItemList.new()
+	_sub_actions_list.custom_minimum_size = Vector2(0, 90)
+	_sub_actions_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_sub_actions_list.item_activated.connect(_on_sub_action_activated)
+	root.add_child(_sub_actions_list)
+	
+	var arow := HBoxContainer.new()
+	root.add_child(arow)
+	var aadd := Button.new()
+	aadd.text = "Add Action"
+	aadd.pressed.connect(_on_add_sub_action)
+	arow.add_child(aadd)
+	var aedit := Button.new()
+	aedit.text = "Edit"
+	aedit.pressed.connect(_on_edit_sub_action)
+	arow.add_child(aedit)
+	var adel := Button.new()
+	adel.text = "Remove"
+	adel.pressed.connect(_on_del_sub_action)
+	arow.add_child(adel)
+	var aup := Button.new()
+	aup.text = "↑"
+	aup.pressed.connect(_on_move_sub_action.bind(-1))
+	arow.add_child(aup)
+	var adn := Button.new()
+	adn.text = "↓"
+	adn.pressed.connect(_on_move_sub_action.bind(1))
+	arow.add_child(adn)
+	
 	var hint := Label.new()
-	hint.text = "Use s_name or bare name in expressions.\nCall Subsheet / For Each by name."
+	hint.text = "Vars: s_name in expressions.\nCall Subsheet / For Each by name."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_color_override("font_color", Color(0.65, 0.7, 0.75))
 	hint.add_theme_font_size_override("font_size", 10)
@@ -122,7 +165,45 @@ func refresh() -> void:
 			var ac: int = 0
 			if "actions" in s:
 				ac = s.actions.size()
-			_sub_list.add_item("%s (%d actions)" % [s.subsheet_name, ac])
+			_sub_list.add_item("%s (%d)" % [s.subsheet_name, ac])
+	_refresh_sub_actions()
+
+func _on_var_selected(index: int) -> void:
+	if globals == null or index < 0 or index >= globals.sheet_var_defs.size():
+		return
+	var d: Dictionary = globals.sheet_var_defs[index]
+	_name_edit.text = str(d.get("name", ""))
+	var t: String = str(d.get("type", "Variant"))
+	var ti := TYPES.find(t)
+	_type_option.selected = ti if ti >= 0 else 4
+	_default_edit.text = str(d.get("default", ""))
+
+func _on_sub_selected(index: int) -> void:
+	_selected_sub_index = index
+	_refresh_sub_actions()
+
+func _refresh_sub_actions() -> void:
+	if _sub_actions_list == null:
+		return
+	_sub_actions_list.clear()
+	if globals == null or _selected_sub_index < 0 or _selected_sub_index >= globals.sheet_subsheets.size():
+		_sub_actions_label.text = "Subsheet actions (select a subsheet)"
+		return
+	var sub = globals.sheet_subsheets[_selected_sub_index]
+	_sub_actions_label.text = "Actions in «%s»" % str(sub.subsheet_name)
+	if not ("actions" in sub):
+		return
+	for i in range(sub.actions.size()):
+		var act = sub.actions[i]
+		if act == null:
+			_sub_actions_list.add_item("[%d] (null)" % i)
+			continue
+		var label := str(act.action_id)
+		if str(act.target_node) != "":
+			label += " @ " + str(act.target_node)
+		if not act.inputs.is_empty():
+			label += " " + str(act.inputs)
+		_sub_actions_list.add_item(label)
 
 func _on_add_var() -> void:
 	if globals == null:
@@ -131,9 +212,7 @@ func _on_add_var() -> void:
 	if vname.is_empty() or not vname.is_valid_identifier():
 		return
 	var type_name: String = TYPES[_type_option.selected]
-	var def_raw := _default_edit.text
-	var default_val: Variant = _parse_default(def_raw, type_name)
-	# Update existing
+	var default_val: Variant = _parse_default(_default_edit.text, type_name)
 	var found := false
 	for i in range(globals.sheet_var_defs.size()):
 		var d: Dictionary = globals.sheet_var_defs[i]
@@ -176,6 +255,9 @@ func _on_add_sub() -> void:
 	globals.sheet_dirty = true
 	_sub_name_edit.clear()
 	refresh()
+	_selected_sub_index = globals.sheet_subsheets.size() - 1
+	_sub_list.select(_selected_sub_index)
+	_refresh_sub_actions()
 	meta_changed.emit()
 
 func _on_del_sub() -> void:
@@ -187,9 +269,73 @@ func _on_del_sub() -> void:
 	var idx: int = sel[0]
 	if idx >= 0 and idx < globals.sheet_subsheets.size():
 		globals.sheet_subsheets.remove_at(idx)
+		_selected_sub_index = -1
 		globals.sheet_dirty = true
 		refresh()
 		meta_changed.emit()
+
+func _on_add_sub_action() -> void:
+	if _selected_sub_index < 0:
+		return
+	add_subsheet_action_requested.emit(_selected_sub_index)
+
+func _on_edit_sub_action() -> void:
+	if _selected_sub_index < 0:
+		return
+	var sel := _sub_actions_list.get_selected_items()
+	if sel.is_empty():
+		return
+	edit_subsheet_action_requested.emit(_selected_sub_index, sel[0])
+
+func _on_sub_action_activated(index: int) -> void:
+	if _selected_sub_index < 0:
+		return
+	edit_subsheet_action_requested.emit(_selected_sub_index, index)
+
+func _on_del_sub_action() -> void:
+	if globals == null or _selected_sub_index < 0:
+		return
+	var sel := _sub_actions_list.get_selected_items()
+	if sel.is_empty():
+		return
+	var sub = globals.sheet_subsheets[_selected_sub_index]
+	var ai: int = sel[0]
+	if ai >= 0 and ai < sub.actions.size():
+		sub.actions.remove_at(ai)
+		globals.sheet_dirty = true
+		_refresh_sub_actions()
+		refresh()
+		meta_changed.emit()
+
+func _on_move_sub_action(delta: int) -> void:
+	if globals == null or _selected_sub_index < 0:
+		return
+	var sel := _sub_actions_list.get_selected_items()
+	if sel.is_empty():
+		return
+	var sub = globals.sheet_subsheets[_selected_sub_index]
+	var ai: int = sel[0]
+	var bi: int = ai + delta
+	if bi < 0 or bi >= sub.actions.size():
+		return
+	var tmp = sub.actions[ai]
+	sub.actions[ai] = sub.actions[bi]
+	sub.actions[bi] = tmp
+	globals.sheet_dirty = true
+	_refresh_sub_actions()
+	_sub_actions_list.select(bi)
+	meta_changed.emit()
+
+func get_sheet_var_names() -> PackedStringArray:
+	var names: PackedStringArray = []
+	if globals == null:
+		return names
+	for def in globals.sheet_var_defs:
+		if def is Dictionary:
+			var n: String = str(def.get("name", ""))
+			if not n.is_empty():
+				names.append(n)
+	return names
 
 func _parse_default(raw: String, type_name: String) -> Variant:
 	raw = raw.strip_edges()

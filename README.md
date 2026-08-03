@@ -12,7 +12,16 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - This fork: https://github.com/slagusev/FlowKit  
 - Site assets (fork): `website/` in this repo  
 
-## What's different in this fork (2.4)
+## What's different in this fork (2.5)
+
+- **Subsheet action editor** — select a subsheet → Add/Edit/Remove/reorder actions
+- **Favorites** in action picker (★, Ctrl+click / right-click)
+- Expression list includes **live sheet vars** from the panel
+- See [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## Earlier (2.4)
 
 ### High-priority features
 - **Sheet variables** — define on the right panel; use `s_name` or bare name in expressions; **Set Sheet Variable** / **Compare Sheet Variable**

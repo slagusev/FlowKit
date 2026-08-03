@@ -200,10 +200,11 @@ func _populate_item_list_for_selected_node() -> void:
 func _add_system_snippets() -> void:
 	item_list.add_item("system.get_var(\"variable_name\")")
 	item_list.add_item("system.get_sheet_var(\"score\")")
-	item_list.add_item("s_score")
 	item_list.add_item("delta")
 	item_list.add_item("current")
 	item_list.add_item("current.global_position")
+	# Live sheet variables from editor (if open)
+	_add_sheet_var_snippets()
 	item_list.add_item("true")
 	item_list.add_item("false")
 	item_list.add_item("null")
@@ -211,6 +212,22 @@ func _add_system_snippets() -> void:
 	item_list.add_item("Vector3(0, 0, 0)")
 	item_list.add_item("Color(1, 1, 1, 1)")
 	_add_type_helpers()
+
+func _add_sheet_var_snippets() -> void:
+	var defs: Array = []
+	if editor_globals != null and "sheet_var_defs" in editor_globals:
+		defs = editor_globals.sheet_var_defs
+	if defs.is_empty():
+		item_list.add_item("s_score  # add vars in Sheet Variables panel")
+		return
+	item_list.add_item("— sheet vars —")
+	for def in defs:
+		if def is Dictionary:
+			var vname: String = str(def.get("name", ""))
+			if vname.is_empty():
+				continue
+			item_list.add_item("s_" + vname)
+			item_list.add_item(vname)
 
 func _add_type_helpers() -> void:
 	item_list.add_item("--- helpers ---")

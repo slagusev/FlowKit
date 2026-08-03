@@ -60,9 +60,16 @@ func _update_label_text():
 	var display_name := _get_display_name_from_registry()
 	var params_text := _get_params_text()
 	var neg_prefix := "NOT " if _cond_block.negated else ""
-	var or_prefix := "OR " if _cond_block.or_with_previous else ""
+	# OR prefix shown only via separator in event row; keep compact "or · " badge
+	var or_prefix := "or · " if _cond_block.or_with_previous else ""
 
 	label.text = "%s%s%s%s" % [or_prefix, neg_prefix, display_name, params_text]
+	if _cond_block.or_with_previous:
+		label.add_theme_color_override("font_color", Color(0.55, 0.88, 1.0))
+	elif _cond_block.negated:
+		label.add_theme_color_override("font_color", Color(1.0, 0.55, 0.5))
+	else:
+		label.remove_theme_color_override("font_color")
 			
 ## If none is found from the registry, this returns the condition's id
 func _get_display_name_from_registry() -> String:
