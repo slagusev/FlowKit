@@ -2,6 +2,17 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.8.0 — Object Mode phase 5 (ship, typewriter, multi-demo menu)
+
+### Packs / recipes
+- **Rigid Thrust (Ship)** + *Make Spaceship (Rigid)*
+- **Typewriter Text** + *Make Typewriter Dialogue*
+- **Start → Space Demo** button recipe
+
+### Demos
+- `demos/object_space/` — zero-G ship + typewriter hint + camera
+- `object_menu` — Platformer Demo + Space Ship Demo buttons
+
 ## 3.7.0 — Object Mode phase 4 (twin-stick, camera, menu→game)
 
 ### Packs / recipes

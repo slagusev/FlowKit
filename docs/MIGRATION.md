@@ -77,6 +77,14 @@
 | object_menu demo | Start button → object_only |
 | Manifest | Existing twin_stick / camera_follow_target behaviors already in tree |
 
+## 3.7 → 3.8
+
+| Change | Action |
+|--------|--------|
+| Rigid thrust / typewriter | Packs + spaceship / dialogue recipes |
+| object_space demo | New scene |
+| object_menu | Second button → space demo |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

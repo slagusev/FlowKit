@@ -123,6 +123,47 @@ static func all_recipes() -> Array:
 			],
 			"groups": ["ui"],
 			"variables": {}
+		},
+		{
+			"id": "spaceship",
+			"name": "Make Spaceship (Rigid)",
+			"description": "RigidBody2D thrust + Health. Group player.",
+			"supported_types": ["RigidBody2D"],
+			"packs": [
+				{"id": "rigid_thrust", "options": {"thrust_force": 450.0, "torque": 9000.0}},
+				{"id": "health", "options": {"max_hp": 100.0, "destroy_on_death": true}}
+			],
+			"groups": ["player"],
+			"variables": {"is_player": true}
+		},
+		{
+			"id": "dialogue_label",
+			"name": "Make Typewriter Dialogue",
+			"description": "Label typewriter from current text (stores full string in meta).",
+			"supported_types": ["Label", "RichTextLabel"],
+			"packs": [
+				{"id": "typewriter", "options": {"chars_per_sec": 28.0}}
+			],
+			"groups": ["ui", "dialogue"],
+			"variables": {}
+		},
+		{
+			"id": "start_to_space",
+			"name": "Start → Space Demo",
+			"description": "Button loads demos/object_space scene.",
+			"supported_types": ["Button", "BaseButton"],
+			"packs": [
+				{
+					"id": "ui_button",
+					"options": {
+						"message": "Launch!",
+						"scene_path": "res://addons/flowkit/demos/object_space/object_space.tscn",
+						"subsheet": ""
+					}
+				}
+			],
+			"groups": ["ui"],
+			"variables": {}
 		}
 	]
 

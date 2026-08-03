@@ -184,6 +184,43 @@ static func all_packs() -> Array:
 			],
 			"variables": {},
 			"default_rules": []
+		},
+		{
+			"id": "rigid_thrust",
+			"name": "Rigid Thrust (Ship)",
+			"description": "Asteroids-style thrust + torque for RigidBody2D.",
+			"supported_types": ["RigidBody2D"],
+			"behavior_ids": ["rigid_thrust"],
+			"behavior_inputs": {
+				"rigid_thrust": {
+					"thrust_action": "ui_up",
+					"left_action": "ui_left",
+					"right_action": "ui_right",
+					"thrust_force": 400.0,
+					"torque": 8000.0
+				}
+			},
+			"option_defs": [
+				{"name": "thrust_force", "type": "float", "default": 400.0, "maps_to": "rigid_thrust.thrust_force"},
+				{"name": "torque", "type": "float", "default": 8000.0, "maps_to": "rigid_thrust.torque"}
+			],
+			"variables": {},
+			"default_rules": []
+		},
+		{
+			"id": "typewriter",
+			"name": "Typewriter Text",
+			"description": "Reveals Label/RichTextLabel text over time.",
+			"supported_types": ["Label", "RichTextLabel"],
+			"behavior_ids": ["ui_typewriter"],
+			"behavior_inputs": {
+				"ui_typewriter": {"chars_per_sec": 30.0}
+			},
+			"option_defs": [
+				{"name": "chars_per_sec", "type": "float", "default": 30.0, "maps_to": "ui_typewriter.chars_per_sec"}
+			],
+			"variables": {},
+			"default_rules": []
 		}
 	]
 

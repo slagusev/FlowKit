@@ -15,31 +15,28 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.7 — Object Mode phase 4
+## What's new in v3.8 — Object Mode phase 5
 
 | Feature | How |
 |---------|-----|
-| **Twin-stick player** | Recipe *Make Twin-Stick Player* |
-| **Follow camera** | Camera2D recipe *Make Follow Camera* |
-| **Menu → game** | `demos/object_menu/` Start loads object_only |
+| **Spaceship** | RigidBody2D *Make Spaceship* (thrust) |
+| **Typewriter** | Label *Make Typewriter Dialogue* |
+| **Menu** | Platformer + Space demos |
 
-### Play the loop (no sheet)
+### Play (no event sheet)
 
-1. Open `addons/flowkit/demos/object_menu/object_menu.tscn`
-2. F5 → **Start Game**
-3. Platformer + coin + enemy + camera follow
-
-Or open `demos/object_only/` directly.
+1. `addons/flowkit/demos/object_menu/object_menu.tscn`
+2. **Platformer Demo** or **Space Ship Demo**
 
 Design: [docs/design/OBJECT_MODE.md](docs/design/OBJECT_MODE.md)
 
-## Earlier — v3.6
+### Object Mode pack list (summary)
 
-Enemy patrol, UI button, rule editor, object_only demo.
+Platformer · Top-down · Twin-stick · Health · Collectible · Bob · Enemy patrol · UI button · Camera follow · **Rigid thrust** · **Typewriter**
 
-## Earlier — v3.5
+## Earlier — v3.7–v3.4
 
-Recipes, collectible, property binds, expanded rules.
+Twin-stick, camera, menu→game, enemy/UI, rule editor, collectible, binds, Object Mode MVP.
 
 ## Earlier — v3.4 Object Mode MVP
 

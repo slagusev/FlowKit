@@ -114,3 +114,15 @@ func test_twin_stick_and_camera_packs():
 	FKObjectRecipes.apply_recipe(cam, "follow_camera")
 	assert_true(FKObjectConfig.is_pack_enabled(cam, "camera_follow"))
 	assert_true(cam.is_current())
+
+func test_spaceship_and_typewriter_recipes():
+	var ship := RigidBody2D.new()
+	add_child_autofree(ship)
+	FKObjectRecipes.apply_recipe(ship, "spaceship")
+	assert_true(FKObjectConfig.is_pack_enabled(ship, "rigid_thrust"))
+	assert_true(ship.is_in_group("player"))
+	var lab := Label.new()
+	lab.text = "Hello world"
+	add_child_autofree(lab)
+	FKObjectRecipes.apply_recipe(lab, "dialogue_label")
+	assert_true(FKObjectConfig.is_pack_enabled(lab, "typewriter"))

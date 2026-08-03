@@ -140,9 +140,14 @@ Each pack declares:
 - Twin-stick pack/recipe, camera follow pack/recipe  
 - Menu demo → object_only  
 
+### Phase 5 (v3.8)
+
+- Rigid thrust + typewriter packs/recipes  
+- object_space demo; multi-entry object_menu  
+
 ### Future packs
 
-Rigid thrust, typewriter UI, visual state machine, more recipes.
+Visual state machine, more combat recipes, export pack presets.
 
 ---
 
