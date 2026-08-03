@@ -33,13 +33,7 @@ func _ensure_demo_setup() -> void:
 		FKObjectRecipes.apply_recipe(enemy, "patrol_enemy")
 	if cam and not FKObjectConfig.is_pack_enabled(cam, "camera_follow"):
 		FKObjectRecipes.apply_recipe(cam, "follow_camera")
-	# Re-activate behaviors for runtime (scene already loaded)
-	var engine = get_node_or_null("/root/FlowKit")
-	if engine:
-		if engine.has_method("_scan_and_activate_behaviors"):
-			engine._scan_and_activate_behaviors(self)
-		if engine.has_method("_scan_object_nodes"):
-			engine._scan_object_nodes(self)
+	FKObjectActivate.refresh_scene(self)
 
 func _process(_delta: float) -> void:
 	if score_label == null:

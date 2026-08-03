@@ -279,7 +279,15 @@ static func apply_pack(node: Node, pack_id: String, options: Dictionary = {}) ->
 	if pack_id == "collectible":
 		vars["points"] = float(opts.get("points", 1.0))
 		if node is Area2D:
-			(node as Area2D).monitoring = true
+			var area := node as Area2D
+			area.monitoring = true
+			area.monitorable = true
+	if pack_id == "typewriter":
+		# Capture full text before typewriter clears it
+		if "text" in node:
+			var full := str(node.get("text"))
+			if not full.is_empty():
+				node.set_meta("flowkit_typewriter_full", full)
 	if not vars.is_empty():
 		node.set_meta("flowkit_variables", vars)
 	

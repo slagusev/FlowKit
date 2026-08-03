@@ -1,21 +1,35 @@
 @tool
 extends VBoxContainer
 class_name FKObjectModePanel
-## Object Mode: packs, recipes, property binds. Writes flowkit_object + behaviors.
+## Object Mode: collapsible packs, recipes, binds, rules.
 
 var node: Node = null
 var registry: FKRegistry = null
 var editor_interface: EditorInterface = null
 
+var _status: Label
+var _recipes_box: VBoxContainer
 var _packs_box: VBoxContainer
 var _options_box: VBoxContainer
-var _recipes_box: VBoxContainer
 var _binds_box: VBoxContainer
+var _rules_list: VBoxContainer
 var _rules_label: Label
 var _pack_checks: Dictionary = {}
 var _bind_var: LineEdit
 var _bind_path: LineEdit
 var _bind_max: LineEdit
+var _when_opt: OptionButton
+var _then_opt: OptionButton
+var _rule_param: LineEdit
+
+var _sec_recipes: VBoxContainer
+var _sec_packs: VBoxContainer
+var _sec_options: VBoxContainer
+var _sec_binds: VBoxContainer
+var _sec_rules: VBoxContainer
+
+const WHEN_IDS := ["hp_lte_0", "var_lte", "var_gte", "body_in_group_player", "always", "on_ready_once"]
+const THEN_IDS := ["queue_free", "print", "damage_self", "damage_overlapping_player", "add_sheet_var", "call_subsheet", "hide", "show", "set_var"]
 
 
 func setup(p_node: Node, p_registry: FKRegistry, p_ei: EditorInterface) -> void:
@@ -30,58 +44,74 @@ func _ready() -> void:
 		_build_shell()
 
 
+func _section(title: String, open: bool = true) -> VBoxContainer:
+	var wrap := VBoxContainer.new()
+	wrap.add_theme_constant_override("separation", 4)
+	add_child(wrap)
+	var head := Button.new()
+	head.toggle_mode = true
+	head.button_pressed = open
+	head.text = ("▼ " if open else "▶ ") + title
+	head.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	head.flat = true
+	wrap.add_child(head)
+	var body := VBoxContainer.new()
+	body.visible = open
+	body.add_theme_constant_override("separation", 4)
+	wrap.add_child(body)
+	head.toggled.connect(func(on: bool):
+		body.visible = on
+		head.text = ("▼ " if on else "▶ ") + title
+	)
+	return body
+
+
 func _build_shell() -> void:
-	add_theme_constant_override("separation", 6)
+	add_theme_constant_override("separation", 8)
 	var title := Label.new()
 	title.text = "Object Mode"
 	title.add_theme_font_size_override("font_size", 14)
 	add_child(title)
 	var hint := Label.new()
-	hint.text = "Packs & recipes: build gameplay without the event sheet."
+	hint.text = "Gameplay without event sheet · recipes first, then packs."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 10)
 	hint.add_theme_color_override("font_color", Color(0.65, 0.7, 0.75))
 	add_child(hint)
+	_status = Label.new()
+	_status.add_theme_font_size_override("font_size", 10)
+	_status.add_theme_color_override("font_color", Color(0.5, 0.85, 0.6))
+	add_child(_status)
 	
-	var rec_lab := Label.new()
-	rec_lab.text = "Recipes (one-click)"
-	rec_lab.add_theme_font_size_override("font_size", 12)
-	add_child(rec_lab)
+	_sec_recipes = _section("Recipes (one-click)", true)
 	_recipes_box = VBoxContainer.new()
-	add_child(_recipes_box)
+	_sec_recipes.add_child(_recipes_box)
 	
-	var packs_lab := Label.new()
-	packs_lab.text = "Packs"
-	packs_lab.add_theme_font_size_override("font_size", 12)
-	add_child(packs_lab)
+	_sec_packs = _section("Packs", true)
 	_packs_box = VBoxContainer.new()
-	add_child(_packs_box)
+	_sec_packs.add_child(_packs_box)
 	
-	var opt_lab := Label.new()
-	opt_lab.text = "Pack options"
-	opt_lab.add_theme_font_size_override("font_size", 12)
-	add_child(opt_lab)
+	_sec_options = _section("Pack options", false)
 	_options_box = VBoxContainer.new()
-	add_child(_options_box)
+	_sec_options.add_child(_options_box)
 	
-	var bind_lab := Label.new()
-	bind_lab.text = "Property binds (var → ProgressBar/Label)"
-	bind_lab.add_theme_font_size_override("font_size", 12)
-	add_child(bind_lab)
+	_sec_binds = _section("Property binds", false)
 	_binds_box = VBoxContainer.new()
-	add_child(_binds_box)
+	_sec_binds.add_child(_binds_box)
 	var brow := HBoxContainer.new()
-	add_child(brow)
+	_sec_binds.add_child(brow)
 	_bind_var = LineEdit.new()
-	_bind_var.placeholder_text = "var (hp)"
-	_bind_var.custom_minimum_size = Vector2(60, 0)
+	_bind_var.placeholder_text = "var"
+	_bind_var.custom_minimum_size = Vector2(56, 0)
+	_bind_var.text = "hp"
 	brow.add_child(_bind_var)
 	_bind_max = LineEdit.new()
-	_bind_max.placeholder_text = "max_var"
-	_bind_max.custom_minimum_size = Vector2(60, 0)
+	_bind_max.placeholder_text = "max"
+	_bind_max.custom_minimum_size = Vector2(56, 0)
+	_bind_max.text = "max_hp"
 	brow.add_child(_bind_max)
 	_bind_path = LineEdit.new()
-	_bind_path.placeholder_text = "NodePath e.g. UI/HPBar"
+	_bind_path.placeholder_text = "path e.g. UI/HPBar"
 	_bind_path.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brow.add_child(_bind_path)
 	var badd := Button.new()
@@ -89,14 +119,11 @@ func _build_shell() -> void:
 	badd.pressed.connect(_on_add_bind)
 	brow.add_child(badd)
 	
-	var rules_lab := Label.new()
-	rules_lab.text = "Local rules"
-	rules_lab.add_theme_font_size_override("font_size", 12)
-	add_child(rules_lab)
+	_sec_rules = _section("Local rules", false)
 	_rules_list = VBoxContainer.new()
-	add_child(_rules_list)
+	_sec_rules.add_child(_rules_list)
 	var rrow := HBoxContainer.new()
-	add_child(rrow)
+	_sec_rules.add_child(rrow)
 	_when_opt = OptionButton.new()
 	for w in WHEN_IDS:
 		_when_opt.add_item(w)
@@ -106,27 +133,24 @@ func _build_shell() -> void:
 		_then_opt.add_item(t)
 	rrow.add_child(_then_opt)
 	_rule_param = LineEdit.new()
-	_rule_param.placeholder_text = "param (Amount/Name/Value)"
+	_rule_param.placeholder_text = "10 · score=5 · death"
 	_rule_param.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rrow.add_child(_rule_param)
 	var radd := Button.new()
-	radd.text = "Add rule"
+	radd.text = "+"
+	radd.tooltip_text = "Add rule"
 	radd.pressed.connect(_on_add_rule)
 	rrow.add_child(radd)
-	
 	_rules_label = Label.new()
 	_rules_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_rules_label.add_theme_font_size_override("font_size", 10)
 	_rules_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
-	add_child(_rules_label)
+	_sec_rules.add_child(_rules_label)
 
-const WHEN_IDS := ["hp_lte_0", "var_lte", "var_gte", "body_in_group_player", "always", "on_ready_once"]
-const THEN_IDS := ["queue_free", "print", "damage_self", "damage_overlapping_player", "add_sheet_var", "call_subsheet", "hide", "show", "set_var"]
 
-var _rules_list: VBoxContainer
-var _when_opt: OptionButton
-var _then_opt: OptionButton
-var _rule_param: LineEdit
+func _set_status(msg: String) -> void:
+	if _status:
+		_status.text = msg
 
 
 func _rebuild() -> void:
@@ -137,7 +161,9 @@ func _rebuild() -> void:
 		c.queue_free()
 	_pack_checks.clear()
 	if node == null:
+		_set_status("")
 		return
+	_set_status("Node: %s (%s)" % [node.name, node.get_class()])
 	for pack in FKObjectPacks.packs_for_node(node):
 		var pid: String = str(pack.get("id", ""))
 		var row := HBoxContainer.new()
@@ -165,7 +191,7 @@ func _rebuild_recipes() -> void:
 	var recipes := FKObjectRecipes.recipes_for_node(node)
 	if recipes.is_empty():
 		var empty := Label.new()
-		empty.text = "(no recipes for this node type)"
+		empty.text = "No recipes for %s" % node.get_class()
 		empty.add_theme_font_size_override("font_size", 10)
 		_recipes_box.add_child(empty)
 		return
@@ -177,6 +203,7 @@ func _rebuild_recipes() -> void:
 		var rid: String = str(r.get("id", ""))
 		btn.pressed.connect(func():
 			FKObjectRecipes.apply_recipe(node, rid)
+			_set_status("Applied recipe: " + rid)
 			_rebuild()
 			_notify()
 		)
@@ -187,11 +214,13 @@ func _on_pack_toggled(on: bool, pack_id: String) -> void:
 	if node == null:
 		return
 	if on:
-		var opts := FKObjectConfig.get_pack_options(node, pack_id)
-		FKObjectPacks.apply_pack(node, pack_id, opts)
+		FKObjectPacks.apply_pack(node, pack_id, FKObjectConfig.get_pack_options(node, pack_id))
+		_set_status("Enabled pack: " + pack_id)
 	else:
 		FKObjectPacks.remove_pack(node, pack_id)
+		_set_status("Disabled pack: " + pack_id)
 	_rebuild_options()
+	_rebuild_rules()
 	_refresh_rules_label()
 	_notify()
 
@@ -201,10 +230,12 @@ func _rebuild_options() -> void:
 		c.queue_free()
 	if node == null:
 		return
+	var any := false
 	for pack in FKObjectPacks.packs_for_node(node):
 		var pid: String = str(pack.get("id", ""))
 		if not FKObjectConfig.is_pack_enabled(node, pid):
 			continue
+		any = true
 		var opts := FKObjectConfig.get_pack_options(node, pid)
 		var head := Label.new()
 		head.text = "· " + str(pack.get("name", pid))
@@ -220,22 +251,21 @@ func _rebuild_options() -> void:
 			_options_box.add_child(line)
 			var lab := Label.new()
 			lab.text = oname
-			lab.custom_minimum_size = Vector2(100, 0)
+			lab.custom_minimum_size = Vector2(96, 0)
 			line.add_child(lab)
 			match otype:
 				"bool":
 					var b := CheckBox.new()
 					b.button_pressed = bool(cur)
-					b.toggled.connect(func(v: bool):
-						_set_option(pid, oname, v)
-					)
+					b.toggled.connect(func(v: bool): _set_option(pid, oname, v))
 					line.add_child(b)
 				"float", "int":
 					var sp := SpinBox.new()
-					sp.min_value = 0
-					sp.max_value = 99999
+					sp.min_value = -999999
+					sp.max_value = 999999
 					sp.step = 1.0
 					sp.allow_greater = true
+					sp.allow_lesser = true
 					sp.value = float(cur) if cur != null else float(od.get("default", 0))
 					sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 					sp.value_changed.connect(func(v: float):
@@ -246,10 +276,13 @@ func _rebuild_options() -> void:
 					var le := LineEdit.new()
 					le.text = str(cur) if cur != null else ""
 					le.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-					le.text_changed.connect(func(t: String):
-						_set_option(pid, oname, t)
-					)
+					le.text_changed.connect(func(t: String): _set_option(pid, oname, t))
 					line.add_child(le)
+	if not any:
+		var empty := Label.new()
+		empty.text = "Enable a pack to edit options."
+		empty.add_theme_font_size_override("font_size", 10)
+		_options_box.add_child(empty)
 
 
 func _set_option(pack_id: String, opt_name: String, value: Variant) -> void:
@@ -301,6 +334,7 @@ func _on_add_bind() -> void:
 	var vname := _bind_var.text.strip_edges() if _bind_var else "hp"
 	var maxv := _bind_max.text.strip_edges() if _bind_max else "max_hp"
 	if path.is_empty():
+		_set_status("Bind needs a NodePath")
 		return
 	if vname.is_empty():
 		vname = "hp"
@@ -308,6 +342,7 @@ func _on_add_bind() -> void:
 		maxv = "max_hp"
 	FKObjectConfig.add_bind(node, vname, path, maxv)
 	_bind_path.clear()
+	_set_status("Bound %s → %s" % [vname, path])
 	_rebuild_binds()
 	_notify()
 
@@ -338,7 +373,8 @@ func _rebuild_rules() -> void:
 		)
 		row.add_child(en)
 		var lab := Label.new()
-		lab.text = "%s → %s %s" % [str(r.get("when", "")), str(r.get("then", "")), str(r.get("params", {}))]
+		lab.text = "%s → %s" % [str(r.get("when", "")), str(r.get("then", ""))]
+		lab.tooltip_text = str(r.get("params", {}))
 		lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		lab.add_theme_font_size_override("font_size", 10)
 		row.add_child(lab)
@@ -364,7 +400,6 @@ func _on_add_rule() -> void:
 	var param_s: String = _rule_param.text.strip_edges() if _rule_param else ""
 	var params: Dictionary = {}
 	if not param_s.is_empty():
-		# "10" → Amount; "score=5" → Name/Value; "death" → Name for subsheet
 		if param_s.is_valid_float():
 			params["Amount"] = float(param_s)
 			params["Value"] = float(param_s)
@@ -390,6 +425,7 @@ func _on_add_rule() -> void:
 	FKObjectConfig.set_local_rules(node, rules)
 	if _rule_param:
 		_rule_param.clear()
+	_set_status("Rule added: %s → %s" % [when_id, then_id])
 	_rebuild_rules()
 	_refresh_rules_label()
 	_notify()
@@ -398,11 +434,8 @@ func _on_add_rule() -> void:
 func _refresh_rules_label() -> void:
 	if _rules_label == null or node == null:
 		return
-	var rules := FKObjectConfig.get_local_rules(node)
-	if rules.is_empty():
-		_rules_label.text = "Tip: param examples — 10 · score=5 · death · Hurt!"
-		return
-	_rules_label.text = "%d rule(s). once=false for continuous hazard overlap." % rules.size()
+	var n := FKObjectConfig.get_local_rules(node).size()
+	_rules_label.text = "%d rule(s) · param: 10 · score=5 · death" % n
 
 
 func _notify() -> void:

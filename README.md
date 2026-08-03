@@ -15,28 +15,24 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.8 — Object Mode phase 5
+## What's new in v3.8.x — Object Mode + polish
 
 | Feature | How |
 |---------|-----|
-| **Spaceship** | RigidBody2D *Make Spaceship* (thrust) |
-| **Typewriter** | Label *Make Typewriter Dialogue* |
-| **Menu** | Platformer + Space demos |
+| **Object Mode** | Inspector packs, recipes, binds, rules |
+| **Demos** | `object_menu` → platformer / space |
+| **Export** | [docs/EXPORT.md](docs/EXPORT.md) checklist |
 
 ### Play (no event sheet)
 
 1. `addons/flowkit/demos/object_menu/object_menu.tscn`
 2. **Platformer Demo** or **Space Ship Demo**
 
-Design: [docs/design/OBJECT_MODE.md](docs/design/OBJECT_MODE.md)
+Design: [docs/design/OBJECT_MODE.md](docs/design/OBJECT_MODE.md) · Migration: [docs/MIGRATION.md](docs/MIGRATION.md)
 
-### Object Mode pack list (summary)
+### Packs (summary)
 
-Platformer · Top-down · Twin-stick · Health · Collectible · Bob · Enemy patrol · UI button · Camera follow · **Rigid thrust** · **Typewriter**
-
-## Earlier — v3.7–v3.4
-
-Twin-stick, camera, menu→game, enemy/UI, rule editor, collectible, binds, Object Mode MVP.
+Platformer · Top-down · Twin-stick · Health · Collectible · Bob · Enemy patrol · UI button · Camera follow · Rigid thrust · Typewriter
 
 ## Earlier — v3.4 Object Mode MVP
 

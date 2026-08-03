@@ -85,6 +85,14 @@
 | object_space demo | New scene |
 | object_menu | Second button → space demo |
 
+## 3.8.0 → 3.8.1
+
+| Change | Action |
+|--------|--------|
+| Collapsible Object Mode UI | No data migration |
+| Signal reconnect on re-apply | Safer pack re-enable |
+| Export guide | See `docs/EXPORT.md` |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

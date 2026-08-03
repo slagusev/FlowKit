@@ -13,9 +13,4 @@ func _ready() -> void:
 	if label is Label and not FKObjectConfig.is_pack_enabled(label, "typewriter"):
 		(label as Label).text = "Thrust: Up · Turn: Left/Right · Object Mode ship"
 		FKObjectRecipes.apply_recipe(label, "dialogue_label")
-	var engine = get_node_or_null("/root/FlowKit")
-	if engine:
-		if engine.has_method("_scan_and_activate_behaviors"):
-			engine._scan_and_activate_behaviors(self)
-		if engine.has_method("_scan_object_nodes"):
-			engine._scan_object_nodes(self)
+	FKObjectActivate.refresh_scene(self)

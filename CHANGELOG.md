@@ -2,6 +2,21 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.8.1 — Polish (Object Mode UX, demos, export docs)
+
+### UX
+- Object Mode panel: **collapsible sections**, status line, clearer empty states
+- Recipes report “Applied recipe: …”
+
+### Reliability
+- Collectible / UI button: **reconnect signals** when re-applying packs
+- Typewriter pack captures full text before clear
+- `FKObjectActivate.refresh_scene` for demos (behaviors + object scan + score init)
+
+### Docs
+- `docs/EXPORT.md` export checklist
+- Plugin description mentions Object Mode
+
 ## 3.8.0 — Object Mode phase 5 (ship, typewriter, multi-demo menu)
 
 ### Packs / recipes

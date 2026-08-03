@@ -23,19 +23,29 @@ func apply(node: Node, inputs: Dictionary) -> void:
 	node.set_meta("flowkit_behavior_" + get_id(), inputs)
 	if not (node is BaseButton):
 		return
-	if node.get_meta("fk_btn_action_connected", false):
-		return
 	var btn := node as BaseButton
+	if node.has_meta("fk_btn_press_cb"):
+		var old: Callable = node.get_meta("fk_btn_press_cb")
+		if btn.pressed.is_connected(old):
+			btn.pressed.disconnect(old)
 	var on_press := func():
 		_do_action(node)
-	if not btn.pressed.is_connected(on_press):
-		btn.pressed.connect(on_press)
+	btn.pressed.connect(on_press)
+	node.set_meta("fk_btn_press_cb", on_press)
 	node.set_meta("fk_btn_action_connected", true)
 
 func remove(node: Node) -> void:
 	var k := "flowkit_behavior_" + get_id()
 	if node.has_meta(k):
 		node.remove_meta(k)
+	if node is BaseButton and node.has_meta("fk_btn_press_cb"):
+		var btn := node as BaseButton
+		var cb: Callable = node.get_meta("fk_btn_press_cb")
+		if btn.pressed.is_connected(cb):
+			btn.pressed.disconnect(cb)
+	for mk in ["fk_btn_action_connected", "fk_btn_press_cb"]:
+		if node.has_meta(mk):
+			node.remove_meta(mk)
 
 func _do_action(node: Node) -> void:
 	if not is_instance_valid(node):
