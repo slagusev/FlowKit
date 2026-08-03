@@ -2,6 +2,18 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 2.9.0 — Large 2D / 3D / UI behaviors & events expansion
+
+### Behaviors (~31 total)
+- **2D:** twin-stick, dash, rigid thrust, sine X, pulse scale, wrap screen, auto flip sprite, camera mouse look
+- **3D:** platformer, fly, rotate Y, bob Y, orbit Y, camera follow group, rigid thrust
+- **UI:** fade pulse, float bob, auto-fill range, typewriter label
+
+### Events (~103 total)
+- **2D:** ceiling hit, start/stop moving, Area mouse/input, CPUParticles/Audio2D finished, camera current, TileMapLayer changed
+- **3D:** left floor/wall, Area mouse/input, screen notifier, NavigationAgent3D, particles, rigid exit, camera current
+- **UI:** press started, visibility, lineedit focus, range changed, item activated, popup hide, tree select, color changed
+
 ## 2.8.0 — More behaviors & events
 
 ### Behaviors (+10)
