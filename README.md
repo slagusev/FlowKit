@@ -15,7 +15,14 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.10.1 — Import fix
+## What's new in v3.10.4 — Bottom panel
+
+| Change | Detail |
+|--------|--------|
+| **Host** | Event sheet is a **bottom panel** tab (Output / Debugger style), not a main-screen top tab |
+| **Open** | Bottom bar **FlowKit** · or Tools → FlowKit → Show FlowKit Panel |
+
+## Earlier — v3.10.1 Import fix
 
 | Fix | Detail |
 |-----|--------|

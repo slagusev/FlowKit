@@ -114,6 +114,14 @@
 |--------|--------|
 | Import parse fix | Update addon if you saw `FlowKitSystem not declared` on `set_text` / `on_text_changed` — no sheet migration |
 
+## 3.10.x → 3.10.4
+
+| Change | Action |
+|--------|--------|
+| UI host | FlowKit sheet is a **bottom panel** tab (not top main-screen). Click **FlowKit** on the bottom bar next to Output/Debugger |
+| Tools menu | **Project → Tools → FlowKit → Show FlowKit Panel** focuses the panel |
+| Sheets | No `.tres` format change |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

@@ -101,50 +101,57 @@ func _enter_tree() -> void:
 	if menu_bar and not menu_bar.template_requested.is_connected(_on_template_requested):
 		menu_bar.template_requested.connect(_on_template_requested)
 	_configure_scroll_layout()
-	# Parent may still be null here (legitimize runs before add_child) — fit on show.
+	# Host (bottom panel) attaches after legitimize — finalize in _on_host_panel_ready.
 
-## Called by EditorPlugin when the FlowKit main-screen tab is selected.
-func _on_main_screen_shown() -> void:
-	_connect_parent_resize()
+## Called after plugin adds this control to the editor bottom panel.
+func _on_host_panel_ready() -> void:
+	_prepare_for_bottom_panel_host()
 	_configure_scroll_layout()
-	_fit_to_parent()
-	# Host size is often finalized 1–2 frames after tab switch.
-	for _i in 3:
+	_sync_full_rect_children()
+	for _i in 2:
 		await get_tree().process_frame
-		if not is_inside_tree() or not visible:
+		if not is_inside_tree():
 			return
-		_fit_to_parent()
+		_prepare_for_bottom_panel_host()
 		_configure_scroll_layout()
+		_sync_full_rect_children()
 	if scroll_container and is_instance_valid(scroll_container):
 		scroll_container.queue_redraw()
 	if blocks_container and is_instance_valid(blocks_container):
 		blocks_container.queue_sort()
-		blocks_container.queue_redraw()
 	queue_redraw()
 
-func _connect_parent_resize() -> void:
-	var parent_ctrl := get_parent() as Control
-	if parent_ctrl == null:
-		return
-	if not parent_ctrl.resized.is_connected(_on_main_screen_parent_resized):
-		parent_ctrl.resized.connect(_on_main_screen_parent_resized)
+## Bottom panel / dock hosts size us as a container child — expand flags, not main-screen anchors.
+func _prepare_for_bottom_panel_host() -> void:
+	# Clear main-screen style anchors that fight the bottom-panel container.
+	set_anchors_preset(Control.PRESET_TOP_LEFT)
+	offset_left = 0.0
+	offset_top = 0.0
+	offset_right = 0.0
+	offset_bottom = 0.0
+	anchor_right = 0.0
+	anchor_bottom = 0.0
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if custom_minimum_size.y < 280.0:
+		custom_minimum_size = Vector2(maxf(custom_minimum_size.x, 400.0), 320.0)
 	if not resized.is_connected(_on_self_resized):
 		resized.connect(_on_self_resized)
 
-func _on_main_screen_parent_resized() -> void:
-	if visible:
-		_fit_to_parent()
-
 func _on_self_resized() -> void:
-	if not visible:
+	_sync_full_rect_children()
+	_configure_scroll_layout()
+
+func _sync_full_rect_children() -> void:
+	if size.x < 2.0 or size.y < 2.0:
 		return
-	# Keep full-rect children in sync when host changes our size.
 	for child_name in ["Background", "OuterVBox"]:
 		var child := get_node_or_null(child_name) as Control
-		if child and size.x > 1.0 and size.y > 1.0:
-			child.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			child.size = size
-			child.position = Vector2.ZERO
+		if child == null:
+			continue
+		child.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		child.position = Vector2.ZERO
+		child.size = size
 
 ## ScrollContainer only scrolls if its *content* does NOT expand vertically.
 ## EXPAND_FILL on the child makes content height == viewport → no scrollbar.
@@ -174,27 +181,14 @@ func _configure_scroll_layout() -> void:
 		workspace.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		workspace.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
-## Keep the editor root filling the main-screen host.
+## Compat alias (older plugin hooks).
 func _fit_to_parent() -> void:
-	if not is_inside_tree():
-		return
-	var parent_ctrl := get_parent() as Control
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	position = Vector2.ZERO
-	# Prefer host size; fall back to the editor viewport work area.
-	var target := Vector2.ZERO
-	if parent_ctrl and parent_ctrl.size.x > 1.0 and parent_ctrl.size.y > 1.0:
-		target = parent_ctrl.size
-	elif editor_globals and editor_globals.editor_interface:
-		var base := editor_globals.editor_interface.get_base_control() as Control
-		if base:
-			target = base.size * 0.85
-	if target.x > 1.0 and target.y > 1.0:
-		size = target
-	_on_self_resized()
+	_prepare_for_bottom_panel_host()
+	_sync_full_rect_children()
 	_configure_scroll_layout()
+
+func _on_main_screen_shown() -> void:
+	await _on_host_panel_ready()
 
 var _templates_popup: PopupMenu
 
@@ -522,9 +516,9 @@ var _is_subbed := false
 func _on_visibility_changed():
 	editor_globals.sheet_editor_visible = self.visible
 	if visible:
-		_connect_parent_resize()
+		_prepare_for_bottom_panel_host()
 		_configure_scroll_layout()
-		_fit_to_parent()
+		_sync_full_rect_children()
 		call_deferred("_fit_to_parent")
 
 func _toggle_modal_signal_subs(on: bool):
