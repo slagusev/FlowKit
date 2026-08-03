@@ -2,6 +2,22 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.4.0 — Object Mode MVP (packs without event sheet)
+
+### Design
+- `docs/design/OBJECT_MODE.md` — dual Object Mode + Event Sheet architecture
+
+### Object Mode MVP
+- Meta `flowkit_object` (packs + local rules) via `FKObjectConfig`
+- Packs: **Platformer 2D**, **Top-Down 2D**, **Health** (`FKObjectPacks`)
+- Inspector **Object Mode** panel: checkboxes + options (`FKObjectModePanel`)
+- Local rules runtime: `hp_lte_0` → `queue_free` / `call_subsheet` / `print` (`FKObjectRules`)
+- Action **Damage Health** for testing HP packs
+- Packs write existing `flowkit_behaviors` + `flowkit_variables` (one runtime)
+
+### Docs
+- Design doc + CHANGELOG; play without opening the event sheet for movement/HP
+
 ## 3.3.0 — CI reliability, JSON FileDialog, picker icons, full-loop demo
 
 ### CI / headless

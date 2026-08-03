@@ -15,7 +15,21 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.3
+## What's new in v3.4 — Object Mode
+
+Build gameplay **without the event sheet**: select a node → Inspector → **Object Mode** packs.
+
+| Pack | Effect |
+|------|--------|
+| **Platformer 2D** | CharacterBody2D movement + jump |
+| **Top-Down 2D** | 4/8-dir movement |
+| **Health** | `n_hp` / `n_max_hp`; optional destroy at 0 |
+
+Design: [docs/design/OBJECT_MODE.md](docs/design/OBJECT_MODE.md)
+
+Sheets remain for complex logic; packs and sheets share the same runtime.
+
+## Earlier — v3.3
 
 | Area | Features |
 |------|----------|

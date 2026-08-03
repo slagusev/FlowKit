@@ -28,12 +28,18 @@ func _ready() -> void:
 
 func set_node(p_node: Node) -> void:
 	node = p_node
+	call_deferred("_refresh_object_mode")
+	call_deferred("_populate_behaviors")
+	call_deferred("_refresh_ivars")
 
 func set_registry(p_registry: FKRegistry) -> void:
 	registry = p_registry
+	call_deferred("_refresh_object_mode")
+	call_deferred("_populate_behaviors")
 
 func set_editor_interface(p_editor_interface: EditorInterface) -> void:
 	editor_interface = p_editor_interface
+	call_deferred("_refresh_object_mode")
 
 func _build_ui() -> void:
 	add_theme_constant_override("separation", 0)
@@ -62,9 +68,22 @@ func _build_ui() -> void:
 	inner_vbox.add_theme_constant_override("separation", 8)
 	margin.add_child(inner_vbox)
 	
+	_build_object_mode_section(inner_vbox)
 	_build_behavior_section(inner_vbox)
 	_build_instance_vars_section(inner_vbox)
 	call_deferred("_set_header_icon")
+
+var _object_mode_panel: FKObjectModePanel
+
+func _build_object_mode_section(parent: VBoxContainer) -> void:
+	_object_mode_panel = FKObjectModePanel.new()
+	parent.add_child(_object_mode_panel)
+	parent.add_child(HSeparator.new())
+	call_deferred("_refresh_object_mode")
+
+func _refresh_object_mode() -> void:
+	if _object_mode_panel and node:
+		_object_mode_panel.setup(node, registry, editor_interface)
 
 # --- Instance variables (n_name) ---------------------------------------------
 var _ivar_list: ItemList

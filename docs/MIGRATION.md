@@ -42,6 +42,15 @@
 | Full-loop demo | `addons/flowkit/demos/full_loop/` |
 | CI smoke | `tools/ci_smoke.gd` must pass in GitHub Actions |
 
+## 3.3 → 3.4 (Object Mode)
+
+| Change | Action |
+|--------|--------|
+| Object Mode packs | Inspector → FlowKit → **Object Mode** checkboxes |
+| Meta `flowkit_object` | Stored on nodes with packs/rules (safe to ignore if unused) |
+| Health pack | Sets `flowkit_variables` keys `hp`, `max_hp` |
+| Event sheets | Unchanged; optional for pack-only prototypes |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

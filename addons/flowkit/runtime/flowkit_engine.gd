@@ -7,6 +7,7 @@ var registry: FKRegistry
 var active_sheets: Array = []  # Each entry: {"sheet": FKEventSheet, "root": Node, "scene_name": String, "uid": int}
 var last_scene: Node = null
 var active_behavior_nodes: Array = []  # Track nodes with active behaviors
+var active_object_nodes: Array = []  # Object Mode nodes with local rules
 var _block_event_providers: Dictionary = {}  # block_id -> per-block event provider instance
 var _branch_executor := FKBranchExecutor.new()
 
@@ -61,6 +62,7 @@ func _process(delta: float) -> void:
 	
 	# Process behaviors (process callback)
 	_process_behaviors(delta, false)
+	_process_object_rules()
 
 func _physics_process(delta: float) -> void:
 	# Store delta on FlowKitSystem so expressions can read it
@@ -92,6 +94,7 @@ func _check_for_scene_change() -> void:
 func _on_scene_changed(scene_root: Node) -> void:
 	last_scene = scene_root
 	active_behavior_nodes.clear()  # Clear behavior tracking on scene change
+	active_object_nodes.clear()
 	
 	# Teardown signal events on previous sheets before clearing
 	_teardown_all_signal_events()
@@ -115,6 +118,7 @@ func _on_scene_changed(scene_root: Node) -> void:
 
 	# Scan and activate behaviors for all nodes in the scene
 	_scan_and_activate_behaviors(scene_root)
+	_scan_object_nodes(scene_root)
 
 	# Load event sheets for the scene root and any instanced child scenes
 	_load_sheets_for_scene(scene_root)
@@ -670,6 +674,38 @@ func _process_behaviors(delta: float, is_physics: bool) -> void:
 func track_behavior_node(node: Node) -> void:
 	if node and is_instance_valid(node) and not active_behavior_nodes.has(node):
 		active_behavior_nodes.append(node)
+
+func _scan_object_nodes(scene_root: Node) -> void:
+	_scan_node_for_object(scene_root)
+
+func _scan_node_for_object(node: Node) -> void:
+	if FKObjectConfig.has_object_config(node):
+		var rules: Array = FKObjectConfig.get_local_rules(node)
+		var any_pack := false
+		var cfg := FKObjectConfig.get_config(node)
+		var packs: Dictionary = cfg.get("packs", {})
+		for k in packs.keys():
+			if packs[k] is Dictionary and bool(packs[k].get("enabled", false)):
+				any_pack = true
+				break
+		if any_pack or not rules.is_empty():
+			if not active_object_nodes.has(node):
+				active_object_nodes.append(node)
+	for child in node.get_children():
+		_scan_node_for_object(child)
+
+func _process_object_rules() -> void:
+	var valid: Array = []
+	for n in active_object_nodes:
+		if is_instance_valid(n):
+			valid.append(n)
+			FKObjectRules.process_node(n, self)
+	active_object_nodes = valid
+
+## Register object-mode node at runtime (after pack applied mid-game).
+func track_object_node(node: Node) -> void:
+	if node and is_instance_valid(node) and not active_object_nodes.has(node):
+		active_object_nodes.append(node)
 
 func get_class() -> String:
 	return "FlowKitEngine"
