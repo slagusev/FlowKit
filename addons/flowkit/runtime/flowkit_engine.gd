@@ -418,34 +418,14 @@ func _debug(from: Node, kind: String, msg: String) -> void:
 	if system and system.has_method("debug_push"):
 		system.debug_push(kind, msg)
 
-## Evaluate event conditions with OR groups:
-## - Conditions with or_with_previous=false start a new AND-group
-## - Subsequent or_with_previous=true conditions join that group as OR
-## - Groups are AND'd together
-## Empty list → pass (same as legacy).
-## Disabled conditions are skipped (do not affect the group).
+## Evaluate event conditions with OR groups (via FKConditionGroups).
+## Disabled conditions are skipped. Empty list → pass.
 func _conditions_pass(conditions: Array, current_root: Node, block_id: String) -> bool:
 	if conditions.is_empty():
 		return true
-	
-	# Build OR groups
-	var groups: Array = []  # Array of Array[FKConditionUnit]
-	var current_group: Array = []
-	for cond in conditions:
-		if cond == null:
-			continue
-		if "enabled" in cond and not cond.enabled:
-			continue
-		if current_group.is_empty() or not cond.or_with_previous:
-			if not current_group.is_empty():
-				groups.append(current_group)
-			current_group = [cond]
-		else:
-			current_group.append(cond)
-	if not current_group.is_empty():
-		groups.append(current_group)
-	
-	# AND of groups; each group is OR of its members
+	var groups: Array = FKConditionGroups.build_or_groups(conditions)
+	if groups.is_empty():
+		return true
 	for gi in range(groups.size()):
 		var group = groups[gi]
 		var group_passed := false

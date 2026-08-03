@@ -15,7 +15,15 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.9 — Event sheet focus
+## What's new in v3.10 — Templates, engine tests, editor split
+
+| Feature | How |
+|---------|-----|
+| **Sheet templates** | **File → New from Template…** (Blank, On Ready Print, Score on Key, OR example, Call Subsheet) |
+| **Condition groups** | Shared `FKConditionGroups` (OR/AND + skip disabled) used by engine + GUT |
+| **Editor architecture** | Undo/redo → `FKMainEditorHistory`; paste → `FKMainEditorPasteController` |
+
+## Earlier — v3.9 Event sheet focus
 
 | Feature | How |
 |---------|-----|

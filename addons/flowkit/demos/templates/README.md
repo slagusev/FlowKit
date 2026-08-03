@@ -1,6 +1,22 @@
 # FlowKit sheet templates
 
-Starter fragments you can copy into a scene event sheet.
+## Built-in (editor)
+
+In the FlowKit panel: **File → New from Template…**
+
+| Id | Name |
+|----|------|
+| `blank` | Empty sheet + score var |
+| `on_ready_print` | On Ready → Print hello |
+| `score_loop` | Space key increments score |
+| `or_example` | OR condition group example |
+| `subsheet_call` | On Ready → Call Subsheet |
+
+Implemented in `editor/sheet_templates.gd` (`FKSheetTemplates`).
+
+## Manual recipes
+
+Starter fragments you can also build by hand.
 
 **Full interactive demo:** see [`../full_loop/`](../full_loop/) — import JSON and run.
 

@@ -37,6 +37,8 @@ var selected_item: FKUnitUi = null  # Currently selected condition/action item (
 ## Multi-select manager (Ctrl+click additive).
 var selection := FKSelectionManager.new()
 var branch_controller := FKMainEditorBranchController.new()
+var paste_controller := FKMainEditorPasteController.new()
+var history_controller := FKMainEditorHistory.new()
 
 # Submodules local to us
 var sheet_state_tracker: FKSheetStateTracker
@@ -85,14 +87,69 @@ func _enter_tree() -> void:
 	
 	input_manager.initialize(self)
 	branch_controller.setup(self)
+	paste_controller.setup(self)
+	history_controller.setup(self)
 	
 	_modal_related_prep()
 	_ensure_sheet_filter_ui()
 	_ensure_mute_toolbar()
+	_ensure_templates_menu()
 	_ensure_sheet_meta_panel()
 	_ensure_dirty_label()
 	_toggle_subs(true)
 	set_process(true)
+	if menu_bar and not menu_bar.template_requested.is_connected(_on_template_requested):
+		menu_bar.template_requested.connect(_on_template_requested)
+
+var _templates_popup: PopupMenu
+
+func _ensure_templates_menu() -> void:
+	if _templates_popup and is_instance_valid(_templates_popup):
+		return
+	if menu_bar == null:
+		return
+	var file_menu: PopupMenu = null
+	for c in menu_bar.get_children():
+		if c is PopupMenu and str(c.name) == "File":
+			file_menu = c
+			break
+	if file_menu == null:
+		return
+	_templates_popup = PopupMenu.new()
+	_templates_popup.name = "Templates"
+	var idx := 0
+	for t in FKSheetTemplates.list_templates():
+		var tid: String = str(t.get("id", ""))
+		var label: String = str(t.get("name", tid))
+		_templates_popup.add_item(label, idx)
+		_templates_popup.set_item_tooltip(idx, str(t.get("description", "")))
+		menu_bar.set_meta("template_id_%d" % idx, tid)
+		idx += 1
+	_templates_popup.id_pressed.connect(func(id: int):
+		menu_bar._on_template_id_pressed(id)
+	)
+	file_menu.add_child(_templates_popup)
+	file_menu.add_submenu_item("New from Template…", "Templates")
+
+func _on_template_requested(template_id: String) -> void:
+	if current_scene_uid == 0:
+		push_warning("[FlowKit] Open a scene before applying a sheet template.")
+		return
+	var sheet := FKSheetTemplates.build(template_id)
+	if sheet == null:
+		return
+	_push_undo_state()
+	_populate_from_sheet(sheet)
+	editor_globals.sheet_var_defs = sheet.sheet_var_defs.duplicate(true)
+	editor_globals.sheet_subsheets = []
+	for s in sheet.subsheets:
+		if s != null:
+			editor_globals.sheet_subsheets.append(s)
+	_refresh_sheet_meta_panel()
+	mark_sheet_dirty()
+	if auto_save_sheets:
+		_save_sheet()
+	print("[FlowKit] Applied template: ", template_id)
 
 var _mute_on_btn: Button
 var _mute_off_btn: Button
@@ -443,28 +500,7 @@ var viewport: Viewport:
 		return get_viewport()
 
 func _paste_events() -> void:
-	var new_events = clipboard.paste_event()
-	if new_events.is_empty():
-		return
-
-	_on_pre_ui_change()
-	
-	var insert_idx = blocks_container.get_child_count()
-	if selected_row:
-		insert_idx = selected_row.get_index() + 1
-
-	var first_row: FKUnitUi = null
-	for ev in new_events:
-		var row := _create_unit_ui(ev)
-		blocks_container.add_child(row)
-		blocks_container.move_child(row, insert_idx)
-		insert_idx += 1
-		if first_row == null:
-			first_row = row
-
-	if first_row:
-		_on_row_selected(first_row)
-	_on_ui_change_done()
+	paste_controller.paste_events()
 
 func _find_parent_branch(node: Control) -> FKBranchUnitUi:
 	"""Find the branch_item that contains this node, or null if at top level."""
@@ -478,148 +514,23 @@ func _find_parent_branch(node: Control) -> FKBranchUnitUi:
 	return null
 	
 func _paste_actions() -> void:
-	var target_row := selected_row
-
-	# If only an item is selected, find its parent row
-	if not target_row and selected_item:
-		target_row = _find_parent_event_row(selected_item)
-
-	if not target_row:
-		return
-
-	var new_actions = clipboard.paste_action()
-	if new_actions.is_empty():
-		return
-
-	_on_pre_ui_change()
-
-	# Check if pasting into a branch
-	var target_branch: FKBranchUnitUi = null
-	if selected_item:
-		target_branch = _find_parent_branch(selected_item)
-
-	if target_branch:
-		var branch_data = target_branch.get_block()
-		for act in new_actions:
-			branch_data.branch_actions.append(act)
-		target_row.update_display()
-		_on_row_selected(target_row)
-		return
-
-	# Normal paste into event row
-	var data := target_row.get_block() as FKEventUnit
-	for act in new_actions:
-		data.actions.append(act)
-
-	target_row.update_display()
-	_on_row_selected(target_row)
-	_on_ui_change_done()
+	paste_controller.paste_actions()
 
 func _paste_conditions() -> void:
-	var target_row := selected_row
-
-	# If only an item is selected, find its parent row
-	if not target_row and selected_item:
-		target_row = _find_parent_event_row(selected_item)
-
-	if not target_row:
-		return
-
-	var new_conditions = clipboard.paste_condition()
-	if new_conditions.is_empty():
-		return
-
-	_on_pre_ui_change()
-
-	var data := target_row.get_block() as FKEventUnit
-	for cond in new_conditions:
-		data.conditions.append(cond)
-
-	target_row.update_display()
-	_on_row_selected(target_row)
-	_on_ui_change_done()
+	paste_controller.paste_conditions()
 
 func _paste_group() -> void:
-	var new_group := clipboard.paste_group()
-	if not new_group:
-		return
+	paste_controller.paste_group()
 	
-	print("[FKMainEditor]: Pasting group")
-	_on_pre_ui_change()
-
-	var target_group: FKGroupUi = null
-
-	# Case 1: selected row *is* a group
-	if selected_row is FKGroupUi:
-		target_group = selected_row
-
-	# Case 2: selected row is inside a group
-	elif selected_row:
-		var parent = selected_row.get_parent()
-		while parent:
-			if parent is FKGroupUi:
-				target_group = parent
-				break
-			parent = parent.get_parent()
-
-	# Paste inside a group if we found one
-	if target_group:
-		if target_group.has_method("add_group_to_group"):
-			target_group.add_group_to_group(new_group)
-		else:
-			# Fallback: append to children manually
-			var block := target_group.get_block()
-			block.children.append({
-				"type": "group",
-				"data": new_group
-			})
-		target_group.update_display()
-		_on_row_selected(target_group)
-		return
-
-	# Otherwise paste at root level
-	var group_node := unit_ui_factory.unit_ui_from(new_group)
-	_wire_signals(group_node)
-	blocks_container.add_child(group_node)
-
-	_on_row_selected(group_node)
-	_on_ui_change_done()
-	
-# === Undo/Redo System ===
+# === Undo/Redo System (delegates to FKMainEditorHistory) ===
 func _push_undo_state() -> void:
-	if not is_fully_legit:
-		print("[FKMainEditor]: Cannot push undo state without being fully legit")
-		return
-	if _is_in_undo_redo || _is_in_editor_rebuild || not sheet_state_tracker.enabled:
-		return
-	
-	print("[FKMainEditor]: Pushing undo state")
-	var units := blocks_container.units
-	sheet_state_tracker.record_snapshot(units)
+	history_controller.push_undo_state()
 
 func _clear_undo_history() -> void:
-	"""Clear undo/redo history (called when switching scenes)."""
-	sheet_state_tracker.clear()
+	history_controller.clear()
 
 func _undo() -> void:
-	print("[FKMainEditor]: Undo requested. Has previous = ", sheet_state_tracker.has_previous())
-	if _is_in_editor_rebuild or not sheet_state_tracker.has_previous() or \
-	_is_in_undo_redo or not sheet_state_tracker.enabled:
-		return
-
-	_is_in_editor_rebuild = true
-	_is_in_undo_redo = true
-
-	var current_units := blocks_container.units
-	var prev_state := sheet_state_tracker.get_previous_snapshot(current_units)
-	var restored_units := ArrayUtils.get_fk_units_in(prev_state)
-	_restore_unit_uis(restored_units)
-	
-	await get_tree().process_frame
-	_is_in_undo_redo = false 
-	_is_in_editor_rebuild = false
-	
-	print("[FKMainEditor]: Undo performed")
+	await history_controller.undo()
 
 var _is_in_editor_rebuild: bool = false
 
@@ -630,33 +541,7 @@ var _is_in_undo_redo: bool:
 		editor_globals.is_in_undo_redo = value
 	
 func _redo() -> void:
-	print("[FKMainEditor]: Redo requested. Has next = ", sheet_state_tracker.has_next())
-	if not sheet_state_tracker.has_next() or _is_in_undo_redo or \
-		not sheet_state_tracker.enabled or _is_in_editor_rebuild:
-		return
-	
-	_is_in_editor_rebuild = true
-	_is_in_undo_redo = true
-
-	# 🔥 Step 1: pop the next snapshot
-	var next_snapshot := sheet_state_tracker._future.pop_back()
-
-	# 🔥 Step 2: restore the UI
-	var restored_units := ArrayUtils.get_fk_units_in(next_snapshot)
-	_restore_unit_uis(restored_units)
-
-	# 🔥 Step 3: AFTER UI is restored, capture the new current state
-	await get_tree().process_frame
-	var current_units := blocks_container.units
-
-	# 🔥 Step 4: push current state into history
-	var current_snapshot := sheet_state_tracker._deep_copy_units(current_units)
-	sheet_state_tracker._history.append(current_snapshot)
-
-	_is_in_undo_redo = false
-	_is_in_editor_rebuild = false
-
-	print("[FKMainEditor]: Redo performed")
+	await history_controller.redo()
 
 
 func _restore_unit_uis(units: Array[FKUnit]) -> void:

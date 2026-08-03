@@ -2,6 +2,21 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.10.0 — Sheet templates, engine GUT paths, main_editor split
+
+### Templates
+- **File → New from Template…** submenu
+- Built-ins: Blank, On Ready Print, Score on Key, OR example, Call Subsheet (`FKSheetTemplates`)
+
+### Engine / tests
+- `FKConditionGroups` — shared OR/AND grouping (enabled skip)
+- Engine `_conditions_pass` uses `FKConditionGroups`
+- GUT: `test_engine_sheet_paths.gd` (groups, templates, enabled flags, for_each)
+
+### Architecture
+- `FKMainEditorHistory` — undo/redo extracted
+- `FKMainEditorPasteController` — paste actions/conditions/groups extracted
+
 ## 3.9.0 — Event sheet focus: play highlight, mute UI, picker counts
 
 ### Play / step highlight

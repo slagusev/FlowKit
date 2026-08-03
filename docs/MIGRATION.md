@@ -100,6 +100,14 @@
 | Play highlight | Editor debugger plugin auto-registered |
 | Mute button | On event rows; sheet data unchanged (`enabled`) |
 
+## 3.9 → 3.10
+
+| Change | Action |
+|--------|--------|
+| Sheet templates | **File → New from Template…** builds a starter `FKEventSheet` into the open scene |
+| `FKConditionGroups` | Engine condition OR groups extracted; same semantics as 3.9 |
+| History / paste controllers | Editor-only refactor; no sheet format change |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.
