@@ -75,6 +75,9 @@ func _prep_tool_submenu_entries():
 	_base_popup.add_item("Generate Providers (MAY BE UNSTABLE)", MENU_ITEM_GENERATE_PROVIDERS)
 	_base_popup.add_item("Generate Provider Manifest (export)", MENU_ITEM_GENERATE_MANIFEST)
 	_base_popup.add_separator()
+	_base_popup.add_item("Provider Browser…", MENU_ITEM_PROVIDER_BROWSER)
+	_base_popup.add_item("Command Palette (Ctrl+K)", MENU_ITEM_COMMAND_PALETTE)
+	_base_popup.add_separator()
 	_base_popup.add_item("Show FlowKit Main Tab", MENU_ITEM_SHOW_MAIN)
 	_base_popup.id_pressed.connect(_on_base_popup_id_pressed)
 	add_tool_submenu_item("FlowKit", _base_popup)
@@ -94,6 +97,14 @@ func _on_base_popup_id_pressed(id: int):
 		MENU_ITEM_GENERATE_MANIFEST:
 			if editor and editor.has_method("_on_generate_manifest"):
 				editor._on_generate_manifest()
+		MENU_ITEM_PROVIDER_BROWSER:
+			if editor and editor.has_method("_open_provider_browser"):
+				get_editor_interface().set_main_screen_editor("FlowKit")
+				editor._open_provider_browser()
+		MENU_ITEM_COMMAND_PALETTE:
+			if editor and editor.has_method("_open_command_palette"):
+				get_editor_interface().set_main_screen_editor("FlowKit")
+				editor._open_command_palette()
 		MENU_ITEM_SHOW_MAIN:
 			# Focus main-screen plugin tab
 			get_editor_interface().set_main_screen_editor("FlowKit")
@@ -103,6 +114,8 @@ const MENU_ITEM_RELOAD_PROVIDERS := 1
 const MENU_ITEM_GENERATE_PROVIDERS := 2
 const MENU_ITEM_GENERATE_MANIFEST := 3
 const MENU_ITEM_SHOW_MAIN := 4
+const MENU_ITEM_PROVIDER_BROWSER := 5
+const MENU_ITEM_COMMAND_PALETTE := 6
 
 func _reload_providers() -> void:
 	if action_registry and action_registry.has_method("load_providers"):

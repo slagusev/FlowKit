@@ -16,6 +16,9 @@ func _run() -> void:
 	ok = _check("FKExpressionAutocomplete", "res://addons/flowkit/editor/modals/expression_autocomplete.gd", checks) and ok
 	ok = _check("FKTypedParamWidgets", "res://addons/flowkit/editor/modals/typed_param_widgets.gd", checks) and ok
 	ok = _check("FKProviderCompat", "res://addons/flowkit/editor/provider_compat.gd", checks) and ok
+	ok = _check("FKCommandPalette", "res://addons/flowkit/editor/command_palette.gd", checks) and ok
+	ok = _check("FKProviderBrowser", "res://addons/flowkit/editor/provider_browser.gd", checks) and ok
+	ok = _check("reload_sheets", "res://addons/flowkit/actions/System/reload_sheets.gd", checks) and ok
 	
 	# Instantiation smoke
 	var reg_script = load("res://addons/flowkit/registry.gd")
@@ -23,6 +26,9 @@ func _run() -> void:
 		var reg = reg_script.new()
 		if reg.has_method("load_all"):
 			reg.load_all()
+		elif reg.has_method("load_providers"):
+			reg.load_providers()
+		if reg.get("action_providers") != null:
 			var n: int = reg.action_providers.size() + reg.event_providers.size()
 			checks.append("registry providers total classes loaded: actions=%d events=%d" % [
 				reg.action_providers.size(), reg.event_providers.size()
@@ -32,7 +38,7 @@ func _run() -> void:
 				ok = false
 		else:
 			ok = false
-			checks.append("FAIL: registry missing load_all")
+			checks.append("FAIL: registry missing provider arrays")
 	
 	var sheet = load("res://addons/flowkit/resources/event_sheet.gd").new()
 	var json_io = load("res://addons/flowkit/editor/sheet_json_io.gd")
@@ -44,6 +50,24 @@ func _run() -> void:
 		checks.append("FAIL: sheet json format")
 	else:
 		checks.append("sheet json ok")
+	
+	# v3.14 merge_sheets smoke
+	if json_io and json_io.has_method("merge_sheets"):
+		var a = load("res://addons/flowkit/resources/event_sheet.gd").new()
+		var b = load("res://addons/flowkit/resources/event_sheet.gd").new()
+		var ax: Array[Dictionary] = [{"name": "x", "type": "int", "default": 1}]
+		var by: Array[Dictionary] = [{"name": "y", "type": "int", "default": 2}]
+		a.sheet_var_defs = ax
+		b.sheet_var_defs = by
+		var m = json_io.merge_sheets(a, b)
+		if m == null or m.sheet_var_defs.size() < 2:
+			ok = false
+			checks.append("FAIL: merge_sheets")
+		else:
+			checks.append("merge_sheets ok")
+	else:
+		ok = false
+		checks.append("FAIL: merge_sheets missing")
 	
 	print("=== FlowKit CI Smoke ===")
 	for c in checks:

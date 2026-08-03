@@ -94,12 +94,18 @@ func _enter_tree() -> void:
 	_ensure_sheet_filter_ui()
 	_ensure_mute_toolbar()
 	_ensure_templates_menu()
+	_ensure_command_palette()
+	_ensure_provider_browser()
 	# Sheet Variables / Subsheets live in the right dock (bound by plugin).
 	_ensure_dirty_label()
 	_toggle_subs(true)
 	set_process(true)
+	set_process_unhandled_key_input(true)
 	if menu_bar and not menu_bar.template_requested.is_connected(_on_template_requested):
 		menu_bar.template_requested.connect(_on_template_requested)
+	if menu_bar and menu_bar.has_signal("import_json_merge_requested") \
+			and not menu_bar.import_json_merge_requested.is_connected(_on_import_json_merge):
+		menu_bar.import_json_merge_requested.connect(_on_import_json_merge)
 	_configure_scroll_layout()
 
 ## Plugin injects the docked Sheet Variables / Subsheets panel.
@@ -266,6 +272,21 @@ func _ensure_mute_toolbar() -> void:
 	retarget_btn.tooltip_text = "Change target node for multi-selected events/items"
 	retarget_btn.pressed.connect(bulk_retarget_selected)
 	top_bar.add_child(retarget_btn)
+	var reload_btn := Button.new()
+	reload_btn.text = "↻ Reload"
+	reload_btn.tooltip_text = "Hot-reload sheet from disk (discard unsaved UI edits)"
+	reload_btn.pressed.connect(_on_hot_reload_sheet)
+	top_bar.add_child(reload_btn)
+	var palette_btn := Button.new()
+	palette_btn.text = "⌘K"
+	palette_btn.tooltip_text = "Command palette (Ctrl+K)"
+	palette_btn.pressed.connect(_open_command_palette)
+	top_bar.add_child(palette_btn)
+	var providers_btn := Button.new()
+	providers_btn.text = "📚 Providers"
+	providers_btn.tooltip_text = "Browse actions / events / conditions / behaviors"
+	providers_btn.pressed.connect(_open_provider_browser)
+	top_bar.add_child(providers_btn)
 	_play_debug_label = Label.new()
 	_play_debug_label.text = ""
 	_play_debug_label.add_theme_font_size_override("font_size", 11)
@@ -404,6 +425,11 @@ func _apply_sheet_filter() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.ctrl_pressed and event.keycode == KEY_K:
+			# Ctrl+K → command palette (v3.14)
+			_open_command_palette()
+			get_viewport().set_input_as_handled()
+			return
 		if event.ctrl_pressed and event.keycode == KEY_F:
 			if sheet_filter_edit:
 				sheet_filter_edit.grab_focus()
@@ -1178,11 +1204,11 @@ func _on_import_json() -> void:
 	var dialog := FileDialog.new()
 	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 	dialog.access = FileDialog.ACCESS_RESOURCES
-	dialog.title = "Import FlowKit Sheet JSON"
+	dialog.title = "Import FlowKit Sheet JSON (replace)"
 	dialog.add_filter("*.json", "JSON")
 	dialog.current_dir = "res://flowkit/event_sheets"
 	dialog.file_selected.connect(func(path: String):
-		_import_json_from_path(path)
+		_import_json_from_path(path, false)
 		dialog.queue_free()
 	)
 	dialog.canceled.connect(func(): dialog.queue_free())
@@ -1191,27 +1217,146 @@ func _on_import_json() -> void:
 	_popup_centered_on_editor(dialog)
 	dialog.popup_centered_ratio(0.5)
 
-func _import_json_from_path(path: String) -> void:
+func _on_import_json_merge() -> void:
+	var dialog := FileDialog.new()
+	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	dialog.access = FileDialog.ACCESS_RESOURCES
+	dialog.title = "Import FlowKit Sheet JSON (merge / append)"
+	dialog.add_filter("*.json", "JSON")
+	dialog.current_dir = "res://flowkit/event_sheets"
+	dialog.file_selected.connect(func(path: String):
+		_import_json_from_path(path, true)
+		dialog.queue_free()
+	)
+	dialog.canceled.connect(func(): dialog.queue_free())
+	add_child(dialog)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://flowkit/event_sheets"))
+	_popup_centered_on_editor(dialog)
+	dialog.popup_centered_ratio(0.5)
+
+func _import_json_from_path(path: String, merge: bool = false) -> void:
 	if not FileAccess.file_exists(path):
 		push_warning("[FlowKit] Import JSON: file not found: " + path)
 		return
-	var sheet := FKSheetJsonIO.read_file(path)
-	if sheet == null:
+	var incoming := FKSheetJsonIO.read_file(path)
+	if incoming == null:
 		push_warning("[FlowKit] Import JSON failed to parse: " + path)
 		return
 	_push_undo_state()
+	var sheet: FKEventSheet = incoming
+	if merge:
+		var units := blocks_container.units if blocks_container else []
+		var base := FKEventSheet.from_units(units)
+		base.sheet_var_defs = editor_globals.sheet_var_defs.duplicate(true)
+		base.subsheets = []
+		for s in editor_globals.sheet_subsheets:
+			if s != null:
+				base.subsheets.append(s)
+		sheet = FKSheetJsonIO.merge_sheets(base, incoming)
+		print("[FlowKit] Merged sheet JSON from ", path)
+	else:
+		print("[FlowKit] Imported sheet JSON (replace) from ", path)
 	_populate_from_sheet(sheet)
-	# Restore meta from imported sheet
 	editor_globals.sheet_var_defs = sheet.sheet_var_defs.duplicate(true)
 	editor_globals.sheet_subsheets = []
-	for s in sheet.subsheets:
-		if s != null:
-			editor_globals.sheet_subsheets.append(s)
+	for s2 in sheet.subsheets:
+		if s2 != null:
+			editor_globals.sheet_subsheets.append(s2)
 	_refresh_sheet_meta_panel()
 	mark_sheet_dirty()
 	if auto_save_sheets:
 		_save_sheet()
-	print("[FlowKit] Imported sheet JSON from ", path)
+
+func _on_save_sheet() -> void:
+	_save_sheet()
+
+func _on_hot_reload_sheet() -> void:
+	## Editor: re-read the scene's sheet from disk into the UI.
+	if current_scene_uid == 0:
+		push_warning("[FlowKit] Hot-reload: no scene open")
+		return
+	_push_undo_state()
+	var sheet := sheet_io.load_sheet(current_scene_uid, current_scene_name)
+	if sheet == null:
+		push_warning("[FlowKit] Hot-reload: no sheet on disk for this scene")
+		return
+	_populate_from_sheet(sheet)
+	print("[FlowKit] Hot-reloaded sheet UI from disk (uid=", current_scene_uid, ")")
+
+# === Command palette + Provider browser (v3.14) ===
+
+var _command_palette: FKCommandPalette
+var _provider_browser: FKProviderBrowser
+
+func _ensure_command_palette() -> void:
+	if _command_palette and is_instance_valid(_command_palette):
+		return
+	_command_palette = FKCommandPalette.new()
+	_command_palette.name = "CommandPalette"
+	add_child(_command_palette)
+	_command_palette.setup_default_commands()
+	_command_palette.command_chosen.connect(_on_command_palette_chosen)
+
+func _ensure_provider_browser() -> void:
+	if _provider_browser and is_instance_valid(_provider_browser):
+		return
+	_provider_browser = FKProviderBrowser.new()
+	_provider_browser.name = "ProviderBrowser"
+	add_child(_provider_browser)
+
+func _open_command_palette() -> void:
+	_ensure_command_palette()
+	_popup_centered_on_editor(_command_palette)
+	_command_palette.open_palette()
+
+func _open_provider_browser() -> void:
+	_ensure_provider_browser()
+	_ensure_registry_loaded()
+	var reg = editor_globals.registry if editor_globals else null
+	_popup_centered_on_editor(_provider_browser)
+	_provider_browser.open_with_registry(reg)
+
+func _on_command_palette_chosen(command_id: String) -> void:
+	match command_id:
+		"new_event":
+			_on_add_event_button_pressed()
+		"save":
+			_save_sheet()
+		"export_json":
+			_on_export_json()
+		"import_json":
+			_on_import_json()
+		"import_json_merge":
+			_on_import_json_merge()
+		"bulk_retarget":
+			bulk_retarget_selected()
+		"mute":
+			bulk_toggle_enabled(false)
+		"unmute":
+			bulk_toggle_enabled(true)
+		"undo":
+			_undo()
+		"redo":
+			_redo()
+		"hot_reload":
+			_on_hot_reload_sheet()
+		"reload_providers":
+			_ensure_registry_loaded()
+			if editor_globals and editor_globals.registry and editor_globals.registry.has_method("load_providers"):
+				editor_globals.registry.load_providers()
+				print("[FlowKit] Providers reloaded via palette")
+		"provider_browser":
+			_open_provider_browser()
+		"template_ready":
+			_on_template_requested("on_ready_print")
+		"template_score":
+			_on_template_requested("score_loop")
+		"filter_focus":
+			if sheet_filter_edit:
+				sheet_filter_edit.grab_focus()
+				sheet_filter_edit.select_all()
+		_:
+			push_warning("[FlowKit] Unknown command: " + command_id)
 
 func _on_generate_providers() -> void:
 	if not generator:

@@ -15,7 +15,16 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.13 — Runtime depth
+## What's new in v3.14 — Editor power tools
+
+| Feature | How |
+|---------|-----|
+| **Command palette** | **Ctrl+K** · toolbar ⌘K · Tools → FlowKit |
+| **JSON merge** | File → Import Sheet JSON **(merge)** — append events, fill vars by name |
+| **Hot-reload** | Toolbar **↻ Reload** (editor) · action **Reload Sheets (hot)** (runtime) |
+| **Provider browser** | Live registry catalog · **📚 Providers** toolbar |
+
+## Earlier — v3.13 Runtime depth
 
 | Feature | How |
 |---------|-----|

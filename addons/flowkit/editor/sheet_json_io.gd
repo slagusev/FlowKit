@@ -113,3 +113,78 @@ static func read_file(path: String) -> FKEventSheet:
 	if f == null:
 		return null
 	return sheet_from_json(f.get_as_text())
+
+
+## Merge incoming into base: append events/comments/groups; merge vars & subsheets by name.
+## Does not mutate inputs; returns a new sheet.
+static func merge_sheets(base: FKEventSheet, incoming: FKEventSheet) -> FKEventSheet:
+	if base == null and incoming == null:
+		return FKEventSheet.new()
+	if base == null:
+		return incoming
+	if incoming == null:
+		return base
+	var out := FKEventSheet.new()
+	# Vars by name
+	var var_by: Dictionary = {}
+	for v in base.sheet_var_defs:
+		if v is Dictionary:
+			var_by[str(v.get("name", ""))] = (v as Dictionary).duplicate(true)
+	for v2 in incoming.sheet_var_defs:
+		if v2 is Dictionary:
+			var nm := str(v2.get("name", ""))
+			if nm.is_empty():
+				continue
+			if not var_by.has(nm):
+				var_by[nm] = (v2 as Dictionary).duplicate(true)
+	out.sheet_var_defs = [] as Array[Dictionary]
+	for k in var_by.keys():
+		if str(k).is_empty():
+			continue
+		out.sheet_var_defs.append(var_by[k])
+	# Events append
+	out.events = [] as Array[FKEventUnit]
+	out.item_order = [] as Array[Dictionary]
+	for e in base.events:
+		if e:
+			out.events.append(e)
+			out.item_order.append({"type": "event", "index": out.events.size() - 1})
+	for e2 in incoming.events:
+		if e2:
+			# Fresh block ids to avoid collisions
+			if e2.has_method("ensure_block_id"):
+				e2.block_id = ""
+				e2.ensure_block_id()
+			out.events.append(e2)
+			out.item_order.append({"type": "event", "index": out.events.size() - 1})
+	# Comments
+	out.comments = [] as Array[FKComment]
+	for c in base.comments:
+		if c:
+			out.comments.append(c)
+	for c2 in incoming.comments:
+		if c2:
+			out.comments.append(c2)
+	# Groups
+	out.groups = [] as Array[FKGroup]
+	for g in base.groups:
+		if g:
+			out.groups.append(g)
+	for g2 in incoming.groups:
+		if g2:
+			out.groups.append(g2)
+	# Subsheets by name (incoming fills gaps / does not overwrite existing names)
+	var sub_by: Dictionary = {}
+	for s in base.subsheets:
+		if s != null and "subsheet_name" in s:
+			sub_by[str(s.subsheet_name)] = s
+	for s2 in incoming.subsheets:
+		if s2 != null and "subsheet_name" in s2:
+			var sn := str(s2.subsheet_name)
+			if not sub_by.has(sn):
+				sub_by[sn] = s2
+	out.subsheets = []
+	for k2 in sub_by.keys():
+		out.subsheets.append(sub_by[k2])
+	out.on_loaded_from_disk()
+	return out

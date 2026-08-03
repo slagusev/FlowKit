@@ -149,6 +149,16 @@
 | New actions/conditions | Regen provider manifest before export tree-shake |
 | for_each_max | Default 512; set `FlowKitSystem.for_each_max = 0` for unlimited |
 
+## 3.13 → 3.14
+
+| Change | Action |
+|--------|--------|
+| Command palette | Optional **Ctrl+K** — no sheet format change |
+| Import merge | New menu item; old **Import (replace)** unchanged |
+| Hot-reload editor | **↻ Reload** discards unsaved UI edits (undo stack kept via push) |
+| Runtime `reload_sheets` | New System action — regen provider manifest before export |
+| Provider browser | Read-only catalog; same registry as pickers |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

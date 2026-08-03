@@ -48,4 +48,7 @@ func test_provider_compat_node_match():
 	assert_true(FKProviderCompat.is_node_compatible("CharacterBody2D", ["CharacterBody2D"]))
 	assert_true(FKProviderCompat.is_node_compatible("CharacterBody2D", ["Node"]))
 	assert_true(FKProviderCompat.is_node_compatible("CharacterBody2D", ["Node2D"]))
-	assert_false(FKProviderCompat.is_node_compatible("Node2D", ["CharacterBody2D"]))
+	# Bidirectional inheritance (picker: Node2D ↔ CharacterBody2D) is intentional
+	assert_true(FKProviderCompat.is_node_compatible("Node2D", ["CharacterBody2D"]))
+	assert_false(FKProviderCompat.is_node_compatible("Sprite2D", ["CharacterBody3D"]))
+	assert_false(FKProviderCompat.is_node_compatible("System", ["CharacterBody2D"]))

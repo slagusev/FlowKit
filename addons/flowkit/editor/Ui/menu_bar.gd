@@ -10,6 +10,7 @@ signal undo_requested
 signal redo_requested
 signal export_json_requested
 signal import_json_requested
+signal import_json_merge_requested
 signal template_requested(template_id: String)
 
 func _on_file_id_pressed(id: int) -> void:
@@ -20,8 +21,10 @@ func _on_file_id_pressed(id: int) -> void:
 			emit_signal("save_sheet")
 		2: # Export JSON
 			emit_signal("export_json_requested")
-		3: # Import JSON
+		3: # Import JSON (replace)
 			emit_signal("import_json_requested")
+		4: # Import JSON (merge)
+			emit_signal("import_json_merge_requested")
 		# 10+ reserved for templates (set from main_editor submenu)
 
 func _on_template_id_pressed(id: int) -> void:

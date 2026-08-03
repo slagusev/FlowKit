@@ -2,6 +2,28 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.14.0 — Editor power tools
+
+### Command palette
+- **Ctrl+K** (or toolbar **⌘K** / Tools → FlowKit → Command Palette)
+- Commands: add event, save, export/import JSON, **import merge**, retarget, mute, undo/redo, hot-reload, providers, templates, filter focus
+
+### JSON merge import
+- **File → Import Sheet JSON (merge)…** appends events/comments/groups
+- Vars & subsheets merge by name (incoming fills gaps only)
+- Fresh `block_id`s on appended events (`FKSheetJsonIO.merge_sheets`)
+
+### Hot-reload
+- Toolbar **↻ Reload** re-reads scene sheet from disk into the editor UI
+- Runtime action **Reload Sheets (hot)** (`reload_sheets`) + `FlowKit.hot_reload_sheets()`
+
+### Provider browser
+- In-editor catalog of live registry (actions / events / conditions / behaviors)
+- Toolbar **📚 Providers** · palette · Tools → FlowKit → Provider Browser
+
+### Tests
+- GUT `test_sheet_json_merge_3_14.gd`
+
 ## 3.13.0 — Runtime depth
 
 ### Pick / iterate

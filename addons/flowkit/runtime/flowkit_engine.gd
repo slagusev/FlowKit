@@ -125,6 +125,24 @@ func _on_scene_changed(scene_root: Node) -> void:
 
 
 
+## v3.14: re-read sheets from disk for the current scene without full scene change.
+func hot_reload_sheets() -> void:
+	var scene_root = get_tree().current_scene if get_tree() else null
+	if scene_root == null:
+		print("[FlowKit] hot_reload_sheets: no current_scene")
+		return
+	_teardown_all_signal_events()
+	_block_event_providers.clear()
+	_load_sheets_for_scene(scene_root)
+	for entry in active_sheets:
+		_create_block_providers(entry)
+		_setup_signal_events(entry)
+	var system = get_node_or_null(_path_to_sys)
+	if system and system.has_method("debug_push"):
+		system.debug_push("reload", "hot_reload_sheets ok entries=%d" % active_sheets.size())
+	print("[FlowKit] Hot-reloaded sheets for ", scene_root.name, " (", active_sheets.size(), " entries)")
+
+
 func _load_sheets_for_scene(scene_root: Node) -> void:
 	# Clear previous sheets
 	active_sheets.clear()
