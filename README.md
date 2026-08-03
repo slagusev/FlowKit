@@ -12,7 +12,16 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - This fork: https://github.com/slagusev/FlowKit  
 - Site assets (fork): `website/` in this repo  
 
-## What's different in this fork (2.2)
+## What's different in this fork (2.3)
+
+### Massive provider expansion (2D / 3D / UI)
+- **2D:** Camera2D, Sprite2D, RigidBody2D, Light2D, particles, collision layers, PathFollow2D, RayCast2D, area/area signals, animation finished, tweens (scale/modulate), velocity vector
+- **3D:** Node3D transform/tween, RigidBody3D, Light3D, particles, AudioStreamPlayer3D, collision layers, RayCast3D, area entered, ceiling check
+- **UI:** position/size/scale/rotation, tooltips, mouse filter, focus, tabs, OptionButton, ItemList, popups, texture, text helpers, progress min/max/add, many UI events (submit, select, tab, button down/up)
+
+---
+
+## Earlier (2.2)
 
 ### OR condition groups
 - Right-click a condition → **OR with previous**
