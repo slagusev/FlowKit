@@ -2,6 +2,23 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.3.0 — CI reliability, JSON FileDialog, picker icons, full-loop demo
+
+### CI / headless
+- Dev **main scene** → `tests/empty_main.tscn` (avoids demo hang in headless)
+- `tools/ci_smoke.gd` — load core classes + registry smoke, non-zero exit on fail
+- GitHub Actions: import + smoke + GUT + matrix with hard timeouts
+
+### Editor UX
+- **FileDialog** for Export / Import Sheet JSON (pick path under `res://`)
+- Import restores sheet vars + subsheets into meta panel
+- **Picker icons** (`FKPickerIcons`) + category headers for events/conditions too
+
+### Demo & docs
+- `addons/flowkit/demos/full_loop/` — scene + importable `full_loop_sheet.json` + README
+- `docs/MIGRATION.md` — upgrade notes 2.x → 3.3
+- Website / README updated for v3.3
+
 ## 3.2.0 — Max impact + runtime power + pain providers
 
 ### 1 — Maximum impact

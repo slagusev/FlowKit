@@ -185,7 +185,8 @@ func _update_list(filter_text: String = "") -> void:
 			var star := ""
 			if _favorites and _favorites.is_action_favorite(str(item.get("id", ""))):
 				star = "★ "
-			item_list.add_item(star + str(item["name"]))
+			var icon := FKPickerIcons.for_category(str(item.get("category", "General")))
+			item_list.add_item(star + icon + str(item["name"]))
 			var index = item_list.item_count - 1
 			item_list.set_item_metadata(index, item["metadata"])
 	

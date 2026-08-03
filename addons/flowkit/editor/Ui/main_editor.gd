@@ -1130,6 +1130,24 @@ func _on_export_json() -> void:
 	if current_scene_uid == 0 or blocks_container == null:
 		push_warning("[FlowKit] Export JSON: no scene/sheet open")
 		return
+	var dialog := FileDialog.new()
+	dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	dialog.access = FileDialog.ACCESS_RESOURCES
+	dialog.title = "Export FlowKit Sheet JSON"
+	dialog.add_filter("*.json", "JSON")
+	dialog.current_dir = "res://flowkit/event_sheets"
+	dialog.current_file = "export_%s.json" % (current_scene_name if not current_scene_name.is_empty() else str(current_scene_uid))
+	dialog.file_selected.connect(func(path: String):
+		_export_json_to_path(path)
+		dialog.queue_free()
+	)
+	dialog.canceled.connect(func(): dialog.queue_free())
+	add_child(dialog)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://flowkit/event_sheets"))
+	_popup_centered_on_editor(dialog)
+	dialog.popup_centered_ratio(0.5)
+
+func _export_json_to_path(path: String) -> void:
 	var units := blocks_container.units
 	var sheet := FKEventSheet.from_units(units)
 	sheet.sheet_var_defs = editor_globals.sheet_var_defs.duplicate(true)
@@ -1137,18 +1155,31 @@ func _on_export_json() -> void:
 	for s in editor_globals.sheet_subsheets:
 		if s != null:
 			sheet.subsheets.append(s)
-	var path := "res://flowkit/event_sheets/export_%s.json" % (current_scene_name if not current_scene_name.is_empty() else str(current_scene_uid))
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://flowkit/event_sheets"))
 	var err := FKSheetJsonIO.write_file(path, sheet)
 	print("[FlowKit] Exported sheet JSON → %s (err=%s)" % [path, err])
 	if editor_interface:
 		editor_interface.get_resource_filesystem().scan()
 
 func _on_import_json() -> void:
-	var path := "res://flowkit/event_sheets/export_%s.json" % (current_scene_name if not current_scene_name.is_empty() else str(current_scene_uid))
+	var dialog := FileDialog.new()
+	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	dialog.access = FileDialog.ACCESS_RESOURCES
+	dialog.title = "Import FlowKit Sheet JSON"
+	dialog.add_filter("*.json", "JSON")
+	dialog.current_dir = "res://flowkit/event_sheets"
+	dialog.file_selected.connect(func(path: String):
+		_import_json_from_path(path)
+		dialog.queue_free()
+	)
+	dialog.canceled.connect(func(): dialog.queue_free())
+	add_child(dialog)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://flowkit/event_sheets"))
+	_popup_centered_on_editor(dialog)
+	dialog.popup_centered_ratio(0.5)
+
+func _import_json_from_path(path: String) -> void:
 	if not FileAccess.file_exists(path):
-		# Fallback: any export_*.json
-		push_warning("[FlowKit] Import JSON: file not found at %s — place export_*.json under res://flowkit/event_sheets/" % path)
+		push_warning("[FlowKit] Import JSON: file not found: " + path)
 		return
 	var sheet := FKSheetJsonIO.read_file(path)
 	if sheet == null:
@@ -1156,6 +1187,13 @@ func _on_import_json() -> void:
 		return
 	_push_undo_state()
 	_populate_from_sheet(sheet)
+	# Restore meta from imported sheet
+	editor_globals.sheet_var_defs = sheet.sheet_var_defs.duplicate(true)
+	editor_globals.sheet_subsheets = []
+	for s in sheet.subsheets:
+		if s != null:
+			editor_globals.sheet_subsheets.append(s)
+	_refresh_sheet_meta_panel()
 	mark_sheet_dirty()
 	if auto_save_sheets:
 		_save_sheet()

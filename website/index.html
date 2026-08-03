@@ -63,7 +63,7 @@
             <span class="badge badge-blue">Godot 4.5+</span>
             <span class="badge badge-green">MIT License</span>
             <span class="badge badge-purple">Open Source Fork</span>
-            <span class="badge badge-blue">v3.2</span>
+            <span class="badge badge-blue">v3.3</span>
           </div>
           <div class="hero-cta">
             <a
@@ -192,39 +192,38 @@
 
     <section id="whats-new" class="section">
       <div class="container">
-        <h2>What's New in This Fork (v3.2)</h2>
+        <h2>What's New in This Fork (v3.3)</h2>
         <div class="changelog-grid">
           <div class="changelog-card">
-            <h3>Editor power tools</h3>
+            <h3>Ship &amp; CI</h3>
             <ul>
-              <li>Typed expression inputs (bool / int / float + Expression mode)</li>
-              <li>Multi-select events &amp; items (Ctrl+click)</li>
-              <li>Bulk disable/enable (Ctrl+Shift+D/E)</li>
-              <li>Event breakpoints · step highlight · F8/F9</li>
-              <li>Expression autocomplete + action categories</li>
-              <li>Mute UI · sheet JSON export/import</li>
+              <li>Headless-friendly empty main scene</li>
+              <li>CI smoke + GUT + matrix (Godot 4.6)</li>
+              <li>Migration guide <code>docs/MIGRATION.md</code></li>
+              <li>Full-loop demo with importable JSON sheet</li>
             </ul>
           </div>
           <div class="changelog-card">
-            <h3>Runtime &amp; data</h3>
+            <h3>Editor</h3>
             <ul>
-              <li>Pick random / invert / max · families</li>
-              <li>Parallel subsheets · save/load state</li>
-              <li>Instance vars in inspector · multi-behaviors</li>
-              <li>Subsheet params <code>p_</code> · return <code>r_value</code></li>
-              <li>Profiler tops in debug overlay</li>
+              <li>JSON export/import via <strong>FileDialog</strong></li>
+              <li>Picker icons + category headers</li>
+              <li>Breakpoints · autocomplete · multi-select · mute</li>
+              <li>F4 / F8 / F9 debugger</li>
             </ul>
           </div>
           <div class="changelog-card">
-            <h3>Providers &amp; quality</h3>
+            <h3>Runtime &amp; providers</h3>
             <ul>
-              <li>Multiplayer peer · TileMap cell · shader param</li>
-              <li>Load resource · InputMap rebind</li>
-              <li>Nav / AnimationTree · CI Godot 4.6</li>
-              <li>Templates under <code>demos/templates/</code></li>
+              <li>Subsheet params/return · pick/families · save state</li>
+              <li>Multi-behavior · Nav · AnimationTree</li>
+              <li>Multiplayer · TileMap · shader · InputMap</li>
             </ul>
           </div>
         </div>
+        <p class="section-intro" style="margin-top: 1rem">
+          Video tip: import <code>full_loop_sheet.json</code> → Space → F9 step → F4 overlay (8–15s GIF).
+        </p>
         <p class="section-intro" style="margin-top: 1.5rem">
           Full history:
           <a href="https://github.com/slagusev/FlowKit/blob/master/CHANGELOG.md" target="_blank" rel="noopener"

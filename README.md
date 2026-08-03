@@ -15,7 +15,23 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.2
+## What's new in v3.3
+
+| Area | Features |
+|------|----------|
+| **CI** | Empty main scene, `ci_smoke.gd`, hard timeouts on Godot 4.6 |
+| **JSON** | **FileDialog** export/import (no fixed path) |
+| **Pickers** | Category **icons** (emoji) + headers for actions/events/conditions |
+| **Demo** | `demos/full_loop/` — import JSON → Space awards score → F8/F9 |
+| **Docs** | [docs/MIGRATION.md](docs/MIGRATION.md) |
+
+### Full-loop demo
+
+1. Open `addons/flowkit/demos/full_loop/full_loop.tscn`
+2. FlowKit → **File → Import Sheet JSON…** → `full_loop_sheet.json`
+3. Run · **Space** · **F4** / **F8** / **F9**
+
+## Earlier — v3.2
 
 | Area | Features |
 |------|----------|

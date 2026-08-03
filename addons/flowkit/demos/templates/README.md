@@ -2,6 +2,8 @@
 
 Starter fragments you can copy into a scene event sheet.
 
+**Full interactive demo:** see [`../full_loop/`](../full_loop/) — import JSON and run.
+
 ## platformer_basics
 
 1. Create sheet variables: `score` (int), `lives` (int, default 3).

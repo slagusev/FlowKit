@@ -1,0 +1,159 @@
+{
+	"format": "flowkit_sheet_json",
+	"version": 1,
+	"sheet_var_defs": [
+		{
+			"name": "score",
+			"type": "int",
+			"default": 0
+		}
+	],
+	"item_order": [
+		{
+			"type": "event",
+			"index": 0
+		},
+		{
+			"type": "event",
+			"index": 1
+		}
+	],
+	"events": [
+		{
+			"type": "event",
+			"personal_id": 1,
+			"block_id": "on_ready_full_loop",
+			"event_id": "on_ready",
+			"target_node": "System",
+			"inputs": {},
+			"enabled": true,
+			"trigger_once": false,
+			"once_while_true": false,
+			"breakpoint_enabled": false,
+			"conditions": [],
+			"actions": [
+				{
+					"type": "action",
+					"personal_id": 2,
+					"action_id": "set_sheet_variable",
+					"target_node": "System",
+					"inputs": {
+						"Name": "score",
+						"Value": "0"
+					},
+					"enabled": true,
+					"is_branch": false,
+					"branch_type": "",
+					"branch_id": "",
+					"branch_inputs": {}
+				},
+				{
+					"type": "action",
+					"personal_id": 3,
+					"action_id": "print",
+					"target_node": "System",
+					"inputs": {
+						"Message": "\"Full loop: score reset\""
+					},
+					"enabled": true,
+					"is_branch": false,
+					"branch_type": "",
+					"branch_id": "",
+					"branch_inputs": {}
+				}
+			]
+		},
+		{
+			"type": "event",
+			"personal_id": 4,
+			"block_id": "on_key_space_score",
+			"event_id": "on_key_pressed",
+			"target_node": "System",
+			"inputs": {
+				"Key": "Space"
+			},
+			"enabled": true,
+			"trigger_once": false,
+			"once_while_true": false,
+			"breakpoint_enabled": true,
+			"conditions": [],
+			"actions": [
+				{
+					"type": "action",
+					"personal_id": 5,
+					"action_id": "call_subsheet",
+					"target_node": "System",
+					"inputs": {
+						"Name": "add_score",
+						"ArgsJson": "{\"amount\":10}",
+						"StoreAs": "score"
+					},
+					"enabled": true,
+					"is_branch": false,
+					"branch_type": "",
+					"branch_id": "",
+					"branch_inputs": {}
+				},
+				{
+					"type": "action",
+					"personal_id": 6,
+					"action_id": "print",
+					"target_node": "System",
+					"inputs": {
+						"Message": "\"score now \" + str(s_score)"
+					},
+					"enabled": true,
+					"is_branch": false,
+					"branch_type": "",
+					"branch_id": "",
+					"branch_inputs": {}
+				}
+			]
+		}
+	],
+	"comments": [],
+	"groups": [],
+	"subsheets": [
+		{
+			"subsheet_name": "add_score",
+			"parameters": [
+				{
+					"name": "amount",
+					"type": "int",
+					"default": 1
+				}
+			],
+			"actions": [
+				{
+					"type": "action",
+					"personal_id": 7,
+					"action_id": "set_sheet_variable",
+					"target_node": "System",
+					"inputs": {
+						"Name": "score",
+						"Value": "s_score + p_amount"
+					},
+					"enabled": true,
+					"is_branch": false,
+					"branch_type": "",
+					"branch_id": "",
+					"branch_inputs": {}
+				},
+				{
+					"type": "action",
+					"personal_id": 8,
+					"action_id": "set_subsheet_return",
+					"target_node": "System",
+					"inputs": {
+						"Value": "s_score"
+					},
+					"enabled": true,
+					"is_branch": false,
+					"branch_type": "",
+					"branch_id": "",
+					"branch_inputs": {}
+				}
+			]
+		}
+	]
+}

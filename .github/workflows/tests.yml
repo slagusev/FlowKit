@@ -8,7 +8,7 @@ on:
 
 jobs:
   gut:
-    name: GUT unit tests (Godot 4.6)
+    name: GUT + smoke (Godot 4.6)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +18,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/godot-bin
-          key: godot-4.6.1-stable-linux
+          key: godot-4.6.1-stable-linux-v2
 
       - name: Download Godot 4.6.1
         if: steps.cache-godot.outputs.cache-hit != 'true'
@@ -37,31 +37,37 @@ jobs:
           echo "$HOME/godot-bin" >> $GITHUB_PATH
           ~/godot-bin/godot --version
 
-      # Import can hang on autoloads in some setups — hard timeout, fail the job
+      # Import with hard timeout; empty main_scene reduces hang risk
       - name: Import project
         run: |
-          set -e
-          timeout 180 godot --headless --path . --import --quit-after 20 || {
-            echo "Import timed out or failed"
-            exit 1
-          }
-        timeout-minutes: 5
+          set -euo pipefail
+          timeout 120 godot --headless --path . --import --quit-after 15
+        timeout-minutes: 3
+
+      - name: CI smoke (core classes + registry)
+        run: |
+          set -euo pipefail
+          timeout 90 godot --headless --path . -s res://tools/ci_smoke.gd
+        timeout-minutes: 2
 
       - name: Run GUT unit tests
         run: |
-          set -e
-          timeout 300 godot --headless --path . -s addons/gut/gut_cmdln.gd \
+          set -euo pipefail
+          timeout 240 godot --headless --path . -s addons/gut/gut_cmdln.gd \
             -gdir=res://tests \
             -ginclude_subdirs \
             -gexit \
             -glog=1
-        timeout-minutes: 8
+        timeout-minutes: 5
 
       - name: Generate provider matrix
         run: |
-          set -e
-          timeout 120 godot --headless --path . -s res://tools/generate_provider_matrix.gd
-        timeout-minutes: 3
+          set -euo pipefail
+          timeout 90 godot --headless --path . -s res://tools/generate_provider_matrix.gd
+        timeout-minutes: 2
+
+      - name: Verify matrix exists
+        run: test -s docs/PROVIDER_MATRIX.md
 
       - name: Upload provider matrix artifact
         if: always()
@@ -70,6 +76,3 @@ jobs:
           name: provider-matrix
           path: docs/PROVIDER_MATRIX.md
           if-no-files-found: ignore
-
-      - name: Fail if provider matrix missing after gen
-        run: test -f docs/PROVIDER_MATRIX.md

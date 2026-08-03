@@ -1,0 +1,82 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/flowkit/demos/full_loop/full_loop.gd" id="1_script"]
+
+[node name="FullLoopDemo" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="PanelContainer" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+
+[node name="Margin" type="MarginContainer" parent="UI/Panel"]
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="UI/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="UI/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "FlowKit full-loop demo (v3.3)"
+
+[node name="Help" type="RichTextLabel" parent="UI/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 280)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+fit_content = false
+scroll_active = true
+text = "[b]What this demo teaches[/b]
+1. Sheet variables [code]s_score[/code]
+2. Subsheet with params [code]p_amount[/code] + return [code]r_value[/code]
+3. Pick / family (optional)
+4. Multi-behavior on a node
+5. Breakpoint + F8/F9 step debugger
+6. Save / Load sheet state
+
+[b]Setup (editor)[/b]
+• Open this scene → FlowKit panel
+• [b]File → Import Sheet JSON…[/b] → select
+  [code]addons/flowkit/demos/full_loop/full_loop_sheet.json[/code]
+• Select [code]Player[/code] → Inspector → Behaviors: add platformer or drift
+• Run scene (F5). Press Space to award points via Call Subsheet.
+• F4 debug overlay · set breakpoint on an event · F8/F9 to step
+
+[b]Expected[/b]
+• Score label updates from sheet var
+• Debug log shows events / subsheet / return
+"
+
+[node name="ScoreLabel" type="Label" parent="UI/Panel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Score: 0"
+
+[node name="StatusLabel" type="Label" parent="UI/Panel/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Import full_loop_sheet.json then run."
+
+[node name="Player" type="CharacterBody2D" parent="."]
+position = Vector2(200, 200)
+
+[node name="ColorRect" type="ColorRect" parent="Player"]
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+color = Color(0.3, 0.75, 1, 1)
