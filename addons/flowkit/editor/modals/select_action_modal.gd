@@ -19,6 +19,9 @@ const FavoritesScript = preload("res://addons/flowkit/editor/modals/favorites_ma
 var _all_items_cache: Array = []
 var _recent_items_manager: Variant = null
 var _favorites = null
+## When true, only providers matching the node class are listed.
+var compatible_only: bool = true
+var _compat_toggle: CheckButton
 
 func _enter_tree() -> void:
 	super._enter_tree()
@@ -122,60 +125,37 @@ func populate_actions(node_path: String, node_class: String) -> void:
 		_favorites = FavoritesScript.new()
 	if _recent_items_manager == null:
 		_recent_items_manager = FKRecentItemsManagerUi.new()
+	_ensure_compat_toggle()
 	_load_available_actions()
-
 	if not item_list:
 		return
-
-	_all_items_cache.clear()
 	if description_label:
-		description_label.text = ""
-
-	for action in available_actions:
-		if action == null or not action.has_method("get_supported_types"):
-			continue
-		var supported_types: Array = []
-		for t in action.get_supported_types():
-			supported_types.append(str(t))
-		if not _is_node_compatible(node_class, supported_types):
-			continue
-		if not action.has_method("get_id") or not action.has_method("get_name"):
-			continue
-		var action_name = action.get_name()
-		var action_id = str(action.get_id())
-		var action_desc := ""
-		if action.has_method("get_description"):
-			action_desc = str(action.get_description())
-		var cat := "General"
-		if supported_types.size() > 0:
-			cat = str(supported_types[0])
-		var inputs: Array = []
-		if action.has_method("get_inputs"):
-			inputs = action.get_inputs()
-		_all_items_cache.append({
-			"name": action_name,
-			"id": action_id,
-			"description": action_desc,
-			"category": cat,
-			"metadata": {"id": action_id, "inputs": inputs}
-		})
-
-	_all_items_cache.sort_custom(func(a, b):
-		var af: bool = _favorites != null and _favorites.is_action_favorite(str(a.get("id", "")))
-		var bf: bool = _favorites != null and _favorites.is_action_favorite(str(b.get("id", "")))
-		if af != bf:
-			return af
-		var ca := str(a.get("category", ""))
-		var cb := str(b.get("category", ""))
-		if ca != cb:
-			return ca < cb
-		return str(a["name"]).to_lower() < str(b["name"]).to_lower()
+		description_label.text = "Actions for %s · %s" % [node_class, node_path]
+	var fav_cb := func(id: String) -> bool:
+		return _favorites != null and _favorites.is_action_favorite(id)
+	_all_items_cache = FKProviderPickerCore.build_items(
+		editor_globals.registry if editor_globals else null,
+		"action",
+		node_class,
+		compatible_only,
+		fav_cb
 	)
-
 	_update_list()
 	_populate_recent_list()
 	_focus_search()
 	print("[FKSelectActionModal]: Showing ", _all_items_cache.size(), " actions for ", node_class, " @ ", node_path)
+
+func _ensure_compat_toggle() -> void:
+	if search_box == null:
+		return
+	var host := search_box.get_parent() as Control
+	if host == null:
+		return
+	_compat_toggle = FKProviderPickerCore.ensure_mode_toggle(host, compatible_only, func(on: bool):
+		compatible_only = on
+		if not selected_node_class.is_empty():
+			populate_actions(selected_node_path, selected_node_class)
+	)
 
 func _focus_search() -> void:
 	if search_box:
@@ -190,47 +170,14 @@ func _category_counts() -> Dictionary:
 	return counts
 
 func _update_list(filter_text: String = "") -> void:
-	item_list.clear()
-	var filter_lower = filter_text.to_lower().strip_edges()
-	var last_cat := ""
-	var counts := _category_counts()
-	
-	for item in _all_items_cache:
-		var haystack := (
-			str(item.get("name", "")) + " " +
-			str(item.get("id", "")) + " " +
-			str(item.get("category", "")) + " " +
-			str(item.get("description", ""))
-		).to_lower()
-		if filter_text.is_empty() or filter_lower in haystack:
-			var cat := str(item.get("category", "General"))
-			if cat != last_cat and filter_text.is_empty():
-				var n: int = int(counts.get(cat, 0))
-				item_list.add_item("— %s (%d) —" % [cat, n])
-				item_list.set_item_disabled(item_list.item_count - 1, true)
-				last_cat = cat
-			var star := ""
-			if _favorites and _favorites.is_action_favorite(str(item.get("id", ""))):
-				star = "★ "
-			var icon := FKPickerIcons.for_category(str(item.get("category", "General")))
-			item_list.add_item(star + icon + str(item["name"]))
-			var index = item_list.item_count - 1
-			item_list.set_item_metadata(index, item["metadata"])
-	
-	if item_list.item_count == 0:
-		if filter_text.is_empty():
-			item_list.add_item("No actions for this node type")
-			item_list.set_item_disabled(0, true)
-			item_list.add_item("Tip: pick Sprite2D / Node2D for move/rotate/modulate")
-			item_list.set_item_disabled(1, true)
-			item_list.add_item("Tip: pick System for print / sheet variables")
-			item_list.set_item_disabled(2, true)
-			if available_actions.is_empty():
-				item_list.add_item("Registry empty — open FlowKit → Edit → Generate… or Tools → FlowKit")
-				item_list.set_item_disabled(3, true)
-		else:
-			item_list.add_item("No actions found")
-			item_list.set_item_disabled(0, true)
+	var fav_cb := func(id: String) -> bool:
+		return _favorites != null and _favorites.is_action_favorite(id)
+	FKProviderPickerCore.fill_item_list(
+		item_list, _all_items_cache, filter_text, true, fav_cb, "action_dict"
+	)
+	if item_list.item_count == 0 and filter_text.is_empty():
+		item_list.add_item("Registry empty — Tools → FlowKit → Reload Providers")
+		item_list.set_item_disabled(0, true)
 	elif not filter_text.is_empty() and item_list.item_count > 0 and not item_list.is_item_disabled(0):
 		item_list.select(0)
 		_on_item_selected(0)

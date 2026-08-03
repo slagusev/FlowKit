@@ -20,6 +20,8 @@ const FavoritesScript = preload("res://addons/flowkit/editor/modals/favorites_ma
 
 var _all_items_cache: Array = []
 var _favorites = null
+var compatible_only: bool = true
+var _compat_toggle: CheckButton
 
 func _enter_tree() -> void:
 	super._enter_tree()
@@ -97,68 +99,20 @@ func populate_events(node_path: String, node_class: String) -> void:
 		_favorites = FavoritesScript.new()
 	if _recent_items_manager == null:
 		_recent_items_manager = FKRecentItemsManagerUi.new()
+	_ensure_compat_toggle()
 	_load_available_events()
-
 	if not item_list:
 		return
-
-	_all_items_cache.clear()
 	if description_label:
-		description_label.text = ""
-
-	# Filter events that support this node type
-	for event in available_events:
-		if event == null:
-			continue
-		if event.has_method("get_id") and event.has_method("get_supported_types"):
-			var supported_types: Array = []
-			var raw = event.get_supported_types()
-			for t in raw:
-				supported_types.append(str(t))
-			if not _is_node_compatible(node_class, supported_types):
-				continue
-			var event_name = event.get_name() if event.has_method("get_name") else str(event.get_id())
-			var event_id = str(event.get_id())
-			var event_desc := ""
-			if event.has_method("get_description"):
-				event_desc = str(event.get_description())
-			var cat := "General"
-			if supported_types.size() > 0:
-				cat = str(supported_types[0])
-			_all_items_cache.append({
-				"name": event_name,
-				"id": event_id,
-				"description": event_desc,
-				"category": cat,
-				"metadata": event_id
-			})
-		elif event.has_method("get_events_for"):
-			var supported_types2: Array = []
-			if event.has_method("get_supported_types"):
-				for t2 in event.get_supported_types():
-					supported_types2.append(str(t2))
-			if not _is_node_compatible(node_class, supported_types2):
-				continue
-			var events_list = event.get_events_for(null)
-			for event_data in events_list:
-				_all_items_cache.append({
-					"name": event_data["name"],
-					"id": event_data["id"],
-					"description": event_data.get("description", ""),
-					"category": str(supported_types2[0]) if supported_types2.size() > 0 else "General",
-					"metadata": event_data["id"]
-				})
-
-	_all_items_cache.sort_custom(func(a, b):
-		var af: bool = _favorites != null and _favorites.is_event_favorite(str(a.get("id", "")))
-		var bf: bool = _favorites != null and _favorites.is_event_favorite(str(b.get("id", "")))
-		if af != bf:
-			return af
-		var ca := str(a.get("category", ""))
-		var cb := str(b.get("category", ""))
-		if ca != cb:
-			return ca < cb
-		return str(a["name"]).to_lower() < str(b["name"]).to_lower()
+		description_label.text = "Events for %s · %s" % [node_class, node_path]
+	var fav_cb := func(id: String) -> bool:
+		return _favorites != null and _favorites.is_event_favorite(id)
+	_all_items_cache = FKProviderPickerCore.build_items(
+		editor_globals.registry if editor_globals else null,
+		"event",
+		node_class,
+		compatible_only,
+		fav_cb
 	)
 	_update_list()
 	_populate_recent_list()
@@ -166,6 +120,18 @@ func populate_events(node_path: String, node_class: String) -> void:
 		search_box.clear()
 		search_box.grab_focus()
 	print("[FKSelectEventModal]: Showing ", _all_items_cache.size(), " events for ", node_class, " @ ", node_path)
+
+func _ensure_compat_toggle() -> void:
+	if search_box == null:
+		return
+	var host := search_box.get_parent() as Control
+	if host == null:
+		return
+	_compat_toggle = FKProviderPickerCore.ensure_mode_toggle(host, compatible_only, func(on: bool):
+		compatible_only = on
+		if not selected_node_class.is_empty():
+			populate_events(selected_node_path, selected_node_class)
+	)
 
 func _category_counts() -> Dictionary:
 	var counts: Dictionary = {}
@@ -175,46 +141,12 @@ func _category_counts() -> Dictionary:
 	return counts
 
 func _update_list(filter_text: String = "") -> void:
-	item_list.clear()
-	var filter_lower = filter_text.to_lower().strip_edges()
-	var last_cat := ""
-	var counts := _category_counts()
-	
-	for item in _all_items_cache:
-		var haystack := (
-			str(item.get("name", "")) + " " +
-			str(item.get("id", "")) + " " +
-			str(item.get("category", "")) + " " +
-			str(item.get("description", ""))
-		).to_lower()
-		if filter_text.is_empty() or filter_lower in haystack:
-			var cat := str(item.get("category", "General"))
-			if cat != last_cat and filter_text.is_empty():
-				var n: int = int(counts.get(cat, 0))
-				item_list.add_item("— %s (%d) —" % [cat, n])
-				item_list.set_item_disabled(item_list.item_count - 1, true)
-				last_cat = cat
-			var star := "★ " if _favorites and _favorites.is_event_favorite(str(item.get("id", ""))) else ""
-			var icon := FKPickerIcons.for_category(cat)
-			item_list.add_item(star + icon + str(item["name"]))
-			var index = item_list.item_count - 1
-			item_list.set_item_metadata(index, item["metadata"])
-	
-	if item_list.item_count == 0:
-		if filter_text.is_empty():
-			item_list.add_item("No events for this node type")
-			item_list.set_item_disabled(0, true)
-			item_list.add_item("Tip: pick System for On Ready / On Process / On Key")
-			item_list.set_item_disabled(1, true)
-			item_list.add_item("Sprite2D: use Node events (On Ready) or System + Action on Sprite2D")
-			item_list.set_item_disabled(2, true)
-			if available_events.is_empty():
-				item_list.add_item("(Registry empty — regenerate providers / reload plugin)")
-				item_list.set_item_disabled(3, true)
-		else:
-			item_list.add_item("No events found")
-			item_list.set_item_disabled(0, true)
-	elif not filter_text.is_empty() and item_list.item_count > 0 and not item_list.is_item_disabled(0):
+	var fav_cb := func(id: String) -> bool:
+		return _favorites != null and _favorites.is_event_favorite(id)
+	FKProviderPickerCore.fill_item_list(
+		item_list, _all_items_cache, filter_text, true, fav_cb, "id"
+	)
+	if not filter_text.is_empty() and item_list.item_count > 0 and not item_list.is_item_disabled(0):
 		item_list.select(0)
 		_on_item_selected(0)
 

@@ -150,6 +150,17 @@ static func _run_then(node: Node, then_id: String, params: Dictionary, engine: N
 						bv = b.get_meta("flowkit_variables", {}).duplicate(true)
 					bv["hp"] = float(bv.get("hp", 100)) - amt
 					b.set_meta("flowkit_variables", bv)
+		"emit_object_event":
+			# Bridge Object Mode → Event Sheet (On Object Event)
+			var en := str(params.get("Event", params.get("Name", "object"))).strip_edges()
+			if en.is_empty():
+				en = "object"
+			var payload: Dictionary = {}
+			if params.get("Payload", null) is Dictionary:
+				payload = params.get("Payload")
+			var system = node.get_tree().root.get_node_or_null("/root/FlowKitSystem") if node.get_tree() else null
+			if system and system.has_method("emit_object_event"):
+				system.emit_object_event(en, node, payload)
 		_:
 			pass
 	# Mark on_ready_once consumed

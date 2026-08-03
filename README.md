@@ -15,7 +15,15 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.10.5 — Layout hosts
+## What's new in v3.11 — Power pickers + Object events
+
+| Feature | How |
+|---------|-----|
+| **Compatible / All** | Toggle in Select Event/Action/Condition |
+| **Bulk Retarget** | Multi-select → toolbar **Retarget** |
+| **Object → Sheet** | Action **Emit Object Event** · Event **On Object Event** · Object rule `emit_object_event` |
+
+## Earlier — v3.10.5 Layout hosts
 
 | Piece | Where |
 |-------|--------|

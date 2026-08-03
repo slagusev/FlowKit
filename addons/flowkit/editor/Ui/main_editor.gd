@@ -261,6 +261,11 @@ func _ensure_mute_toolbar() -> void:
 	_mute_on_btn.tooltip_text = "Enable selected events/items (Ctrl+Shift+E)"
 	_mute_on_btn.pressed.connect(func(): bulk_toggle_enabled(true))
 	top_bar.add_child(_mute_on_btn)
+	var retarget_btn := Button.new()
+	retarget_btn.text = "🎯 Retarget"
+	retarget_btn.tooltip_text = "Change target node for multi-selected events/items"
+	retarget_btn.pressed.connect(bulk_retarget_selected)
+	top_bar.add_child(retarget_btn)
 	_play_debug_label = Label.new()
 	_play_debug_label.text = ""
 	_play_debug_label.add_theme_font_size_override("font_size", 11)
@@ -1453,6 +1458,54 @@ func bulk_toggle_enabled(enable: bool) -> void:
 	if auto_save_sheets:
 		_save_sheet()
 
+## v3.11: multi-select → change target_node on events/conditions/actions.
+func bulk_retarget_selected() -> void:
+	var has_sel := selection.selected_rows.size() > 0 or selection.selected_items.size() > 0
+	if not has_sel and selected_row == null and selected_item == null:
+		push_warning("[FlowKit] Select rows/items first (Ctrl+click), then Retarget.")
+		return
+	pending_block_type = "bulk_retarget"
+	_ensure_registry_loaded()
+	var scene_root := editor_interface.get_edited_scene_root() if editor_interface else null
+	if scene_root == null:
+		push_warning("[FlowKit] Open a scene before retarget.")
+		return
+	select_node_modal.populate_from_scene(scene_root, "any")
+	_popup_centered_on_editor(select_node_modal)
+
+func _apply_bulk_retarget(node_path: String) -> void:
+	_push_undo_state()
+	var path := NodePath(node_path)
+	var n := 0
+	var rows: Array = selection.selected_rows.duplicate()
+	if rows.is_empty() and selected_row:
+		rows = [selected_row]
+	for row in rows:
+		if row == null:
+			continue
+		var ed = row.get_block() if row.has_method("get_block") else null
+		if ed and "target_node" in ed:
+			ed.target_node = path
+			n += 1
+			if row.has_method("update_display"):
+				row.update_display()
+	var items: Array = selection.selected_items.duplicate()
+	if items.is_empty() and selected_item:
+		items = [selected_item]
+	for it in items:
+		if it == null or not it.has_method("get_block"):
+			continue
+		var b = it.get_block()
+		if b and "target_node" in b:
+			b.target_node = path
+			n += 1
+			if it.has_method("update_display"):
+				it.update_display()
+	print("[FlowKit] Bulk retarget → ", node_path, " (", n, " units)")
+	mark_sheet_dirty()
+	if auto_save_sheets:
+		_save_sheet()
+
 func _deselect_item() -> void:
 	"""Deselect current condition/action item."""
 	if valid_selected_item and selected_item is FKUnitUi:
@@ -1535,6 +1588,8 @@ func _on_node_selected(node_path: String, node_class: String) -> void:
 			_popup_centered_on_editor(select_action_modal)
 		"subsheet_action_retarget":
 			_apply_subsheet_retarget(node_path)
+		"bulk_retarget":
+			_apply_bulk_retarget(node_path)
 		"branch_condition", "branch_condition_edit", "elseif_condition":
 			select_condition_modal.populate_conditions(node_path, node_class)
 			_popup_centered_on_editor(select_condition_modal)

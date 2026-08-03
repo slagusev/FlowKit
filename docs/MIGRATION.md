@@ -122,6 +122,15 @@
 | Sheet Variables | Right dock tab **FlowKitSheet** (not embedded in the sheet) |
 | 3.10.4 | Ignore bottom-panel experiment if you briefly used it |
 
+## 3.10.x → 3.11
+
+| Change | Action |
+|--------|--------|
+| Picker toggle | **Compatible only** (default on). Turn off to see all providers |
+| Bulk retarget | Toolbar **Retarget** after multi-select |
+| Object events | New providers `emit_object_event` / `on_object_event` — regen manifest before export if you tree-shake |
+| Tools menu | **Project → Tools → FlowKit → Reload Providers** if lists empty |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

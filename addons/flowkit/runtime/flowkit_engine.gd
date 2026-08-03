@@ -324,6 +324,11 @@ func _setup_signal_events(entry: Dictionary) -> void:
 		# Build a trigger callback that runs this block's conditions & actions
 		var trigger_cb: Callable = _make_trigger_callback(block, root_node, sheet_uid)
 		if provider.has_method("setup"):
+			# Object-event filter from unit inputs (v3.11)
+			if provider.has_method("configure_filters") and block.event_id == "on_object_event":
+				var en := str(block.inputs.get("Event", block.inputs.get("Name", "")))
+				var grp := str(block.inputs.get("SourceGroup", ""))
+				provider.configure_filters(en, grp)
 			provider.setup(node, trigger_cb, block.block_id)
 
 ## Teardown all signal events across every active sheet.

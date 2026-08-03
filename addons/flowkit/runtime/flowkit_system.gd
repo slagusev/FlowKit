@@ -63,6 +63,16 @@ var profile_stats: Dictionary = {}
 
 var global_signals: FKGlobalSignals = FKGlobalSignals.new()
 
+## Object Mode → Event Sheet bridge (v3.11).
+## Sheets listen via event `on_object_event`; packs/rules/actions call emit_object_event.
+signal object_event(event_name: String, source: Node, payload: Dictionary)
+
+func emit_object_event(event_name: String, source: Node = null, payload: Dictionary = {}) -> void:
+	var en := event_name.strip_edges()
+	if en.is_empty():
+		return
+	object_event.emit(en, source, payload.duplicate(true) if payload else {})
+
 func _ready() -> void:
 	if not _ready_fired:
 		_ready_fired = true

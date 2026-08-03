@@ -2,6 +2,22 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.11.0 — Power pickers, bulk retarget, Object→Sheet events
+
+### Power-users
+- **FKProviderPickerCore** — shared event/action/condition list builder
+- **Compatible only** toggle on Select Event / Action / Condition (off = All, incompatible dimmed with ⊘)
+- **Bulk Retarget** toolbar button — multi-select rows/items → pick new target node
+
+### Object Mode ↔ Runtime
+- **Emit Object Event** action (`emit_object_event`)
+- **On Object Event** event (`on_object_event`) on System/Node
+- Object rule then: `emit_object_event` → `FlowKitSystem.object_event` bus
+- Payload stashed as `system.variables.last_object_event/source/payload`
+
+### Tests
+- GUT: picker core, compat, object-event bus, for_each helper
+
 ## 3.10.8 — Select Action empty + Tools menu for Generate
 
 ### Fixed

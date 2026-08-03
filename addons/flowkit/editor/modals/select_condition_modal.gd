@@ -97,56 +97,40 @@ func _set_desc_panel_style():
 	
 
 func _load_available_conditions() -> void:
-	"""Load conditions from FKRegistry (no per-modal disk scan)."""
 	available_conditions.clear()
 	if editor_globals and editor_globals.registry:
-		available_conditions = FKProviderCompat.providers_from_registry(editor_globals.registry, "condition")
-	print("[FKSelectConditionModal]: Loaded ", available_conditions.size(), " conditions (registry)")
+		var reg = editor_globals.registry
+		if reg.condition_providers.is_empty() and reg.has_method("load_providers"):
+			reg.load_providers()
+		available_conditions = FKProviderCompat.providers_from_registry(reg, "condition")
+	print("[FKSelectConditionModal]: Loaded ", available_conditions.size(), " conditions")
+
+var compatible_only: bool = true
 
 func populate_conditions(node_path: String, node_class: String) -> void:
 	"""Populate the list with conditions compatible with the selected node."""
 	selected_node_path = node_path
 	selected_node_class = node_class
 	_load_available_conditions()
-	
 	if not item_list:
 		return
-	
-	_all_items_cache.clear()
-	description_label.text = ""
-	
-	# Filter conditions that support this node type
-	for condition in available_conditions:
-		var supported_types = condition.get_supported_types()
-		if _is_node_compatible(node_class, supported_types):
-			var condition_name = condition.get_name()
-			var condition_id = condition.get_id()
-			var condition_desc := ""
-			if condition.has_method("get_description"):
-				condition_desc = str(condition.get_description())
-			
-			var cat := "General"
-			if supported_types.size() > 0:
-				cat = str(supported_types[0])
-			_all_items_cache.append({
-				"name": condition_name,
-				"id": condition_id,
-				"description": condition_desc,
-				"category": cat,
-				"metadata": {"id": condition_id, "inputs": condition.get_inputs()}
-			})
-	
-	_all_items_cache.sort_custom(func(a, b):
-		var af: bool = _favorites != null and _favorites.is_condition_favorite(str(a.get("id", "")))
-		var bf: bool = _favorites != null and _favorites.is_condition_favorite(str(b.get("id", "")))
-		if af != bf:
-			return af
-		var ca := str(a.get("category", ""))
-		var cb := str(b.get("category", ""))
-		if ca != cb:
-			return ca < cb
-		return str(a["name"]).to_lower() < str(b["name"]).to_lower()
+	if description_label:
+		description_label.text = "Conditions for %s · %s" % [node_class, node_path]
+	var fav_cb := func(id: String) -> bool:
+		return _favorites != null and _favorites.is_condition_favorite(id)
+	_all_items_cache = FKProviderPickerCore.build_items(
+		editor_globals.registry if editor_globals else null,
+		"condition",
+		node_class,
+		compatible_only,
+		fav_cb
 	)
+	if search_box and search_box.get_parent():
+		FKProviderPickerCore.ensure_mode_toggle(search_box.get_parent(), compatible_only, func(on: bool):
+			compatible_only = on
+			if not selected_node_class.is_empty():
+				populate_conditions(selected_node_path, selected_node_class)
+		)
 	_update_list()
 	_populate_recent_list()
 	if search_box:
@@ -161,37 +145,11 @@ func _category_counts() -> Dictionary:
 	return counts
 
 func _update_list(filter_text: String = "") -> void:
-	item_list.clear()
-	var filter_lower = filter_text.to_lower().strip_edges()
-	var last_cat := ""
-	var counts := _category_counts()
-	
-	for item in _all_items_cache:
-		var haystack := (
-			str(item.get("name", "")) + " " +
-			str(item.get("id", "")) + " " +
-			str(item.get("category", "")) + " " +
-			str(item.get("description", ""))
-		).to_lower()
-		if filter_text.is_empty() or filter_lower in haystack:
-			var cat := str(item.get("category", "General"))
-			if cat != last_cat and filter_text.is_empty():
-				var n: int = int(counts.get(cat, 0))
-				item_list.add_item("— %s (%d) —" % [cat, n])
-				item_list.set_item_disabled(item_list.item_count - 1, true)
-				last_cat = cat
-			var star := "★ " if _favorites and _favorites.is_condition_favorite(str(item.get("id", ""))) else ""
-			var icon := FKPickerIcons.for_category(cat)
-			item_list.add_item(star + icon + str(item["name"]))
-			var index = item_list.item_count - 1
-			item_list.set_item_metadata(index, item["metadata"])
-	
-	if item_list.item_count == 0:
-		if filter_text.is_empty():
-			item_list.add_item("No conditions available for this node type")
-		else:
-			item_list.add_item("No conditions found")
-		item_list.set_item_disabled(0, true)
+	var fav_cb := func(id: String) -> bool:
+		return _favorites != null and _favorites.is_condition_favorite(id)
+	FKProviderPickerCore.fill_item_list(
+		item_list, _all_items_cache, filter_text, true, fav_cb, "action_dict"
+	)
 	elif not filter_text.is_empty() and item_list.item_count > 0 and not item_list.is_item_disabled(0):
 		item_list.select(0)
 		_on_item_selected(0)
