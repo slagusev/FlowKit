@@ -364,7 +364,8 @@ func _update_event_header() -> void:
 	if e.breakpoint_enabled:
 		flags += " 🔴"
 
-	event_header_label.text = (_header_label_format % [display_name, node_name, params_text]) + flags
+	var mute_icon := "🔇 " if not e.enabled else ""
+	event_header_label.text = mute_icon + (_header_label_format % [display_name, node_name, params_text]) + flags
 	if event_header_label:
 		if not e.enabled:
 			event_header_label.modulate = Color(0.55, 0.55, 0.55)
@@ -372,21 +373,102 @@ func _update_event_header() -> void:
 			event_header_label.modulate = Color(1.0, 0.55, 0.45)
 		else:
 			event_header_label.modulate = Color.WHITE
+	_ensure_mute_button()
+	_sync_mute_button(e)
 	# Runtime step highlight (when playing with debugger)
 	_apply_debug_highlight()
+	set_process(not is_editor_preview)
+
+var _mute_btn: Button
+
+func _ensure_mute_button() -> void:
+	if _mute_btn and is_instance_valid(_mute_btn):
+		return
+	if event_header_label == null or event_header_label.get_parent() == null:
+		return
+	_mute_btn = Button.new()
+	_mute_btn.flat = true
+	_mute_btn.focus_mode = Control.FOCUS_NONE
+	_mute_btn.tooltip_text = "Enable / disable event (mute)"
+	_mute_btn.custom_minimum_size = Vector2(28, 0)
+	_mute_btn.pressed.connect(_on_mute_button_pressed)
+	event_header_label.get_parent().add_child(_mute_btn)
+	# Prefer next to header
+	event_header_label.get_parent().move_child(_mute_btn, event_header_label.get_index() + 1)
+
+func _sync_mute_button(e: FKEventUnit) -> void:
+	if _mute_btn == null:
+		return
+	_mute_btn.text = "🔇" if not e.enabled else "🔊"
+	_mute_btn.modulate = Color(1, 0.6, 0.5) if not e.enabled else Color.WHITE
+
+func _on_mute_button_pressed() -> void:
+	_toggle_event_flag("enabled")
+
+func _process(_delta: float) -> void:
+	if is_editor_preview:
+		return
+	# Poll play-debug highlight from editor globals (debugger bridge)
+	_apply_debug_highlight()
+	_apply_action_debug_highlights()
 
 func _apply_debug_highlight() -> void:
 	var e := _get_event()
-	if e == null or panel == null:
+	if e == null:
 		return
-	var system = get_tree().root.get_node_or_null("/root/FlowKitSystem") if get_tree() else null
-	var active_id := ""
-	if system and "debug_active_block_id" in system:
-		active_id = str(system.debug_active_block_id)
-	if not active_id.is_empty() and e.block_id == active_id:
-		modulate = Color(1.15, 1.05, 0.55)
+	var active_id := _get_play_block_id()
+	var active_action := _get_play_action_id()
+	var is_active := not active_id.is_empty() and e.block_id == active_id
+	if is_active:
+		modulate = Color(1.2, 1.1, 0.45)
+		if panel:
+			panel.modulate = Color(1.15, 1.08, 0.7)
 	else:
-		modulate = Color.WHITE
+		# Respect mute dimming on whole row
+		if e.enabled:
+			modulate = Color.WHITE
+			if panel:
+				panel.modulate = Color.WHITE
+		else:
+			modulate = Color(0.65, 0.65, 0.65)
+			if panel:
+				panel.modulate = Color(0.75, 0.75, 0.75)
+	# When this event is active and stepping an action, flash action rows
+	if is_active and not active_action.is_empty():
+		pass  # handled in _apply_action_debug_highlights
+
+func _apply_action_debug_highlights() -> void:
+	var e := _get_event()
+	if e == null or actions_container == null:
+		return
+	var active_id := _get_play_block_id()
+	var active_action := _get_play_action_id()
+	var event_active := not active_id.is_empty() and e.block_id == active_id
+	for child in actions_container.get_children():
+		if child is FKActionUnitUi:
+			var act: FKActionUnit = child.get_block() as FKActionUnit if child.has_method("get_block") else null
+			if act and event_active and not active_action.is_empty() and act.action_id == active_action:
+				child.modulate = Color(1.25, 1.15, 0.5)
+			elif act and not act.enabled:
+				child.modulate = Color(0.55, 0.55, 0.55)
+			else:
+				child.modulate = Color.WHITE
+
+func _get_play_block_id() -> String:
+	if _globals and "debug_play_block_id" in _globals:
+		return str(_globals.debug_play_block_id)
+	var system = get_tree().root.get_node_or_null("/root/FlowKitSystem") if get_tree() else null
+	if system and "debug_active_block_id" in system:
+		return str(system.debug_active_block_id)
+	return ""
+
+func _get_play_action_id() -> String:
+	if _globals and "debug_play_action_id" in _globals:
+		return str(_globals.debug_play_action_id)
+	var system = get_tree().root.get_node_or_null("/root/FlowKitSystem") if get_tree() else null
+	if system and "debug_active_action_id" in system:
+		return str(system.debug_active_action_id)
+	return ""
 
 func _get_event() -> FKEventUnit:
 	return get_block() as FKEventUnit

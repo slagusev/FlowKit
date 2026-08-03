@@ -55,3 +55,9 @@ var sheet_editor_visible: bool = false
 
 ## Ready to let the user do things like add and reorder Actions
 var sheet_editor_ready := false
+
+## Live Play debug highlight (filled by EditorDebuggerPlugin from game process).
+var debug_play_block_id: String = ""
+var debug_play_event_id: String = ""
+var debug_play_action_id: String = ""
+var debug_play_tick: int = 0

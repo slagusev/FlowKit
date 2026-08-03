@@ -397,16 +397,21 @@ func _execute_block(block: FKEventUnit, current_root: Node, sheet_uid: int = 0) 
 
 func _set_debug_active(block_id: String, event_id: String, action_id: String) -> void:
 	var system = get_node_or_null(_path_to_sys)
-	if system == null:
-		return
-	if "debug_active_block_id" in system:
-		system.debug_active_block_id = block_id
-	if "debug_active_event_id" in system:
-		system.debug_active_event_id = event_id
-	if "debug_active_action_id" in system:
-		system.debug_active_action_id = action_id
-	if system.has_method("debug_push") and not block_id.is_empty():
-		system.debug_push("highlight", "▶ %s · %s" % [event_id, action_id if not action_id.is_empty() else "event"])
+	if system:
+		if "debug_active_block_id" in system:
+			system.debug_active_block_id = block_id
+		if "debug_active_event_id" in system:
+			system.debug_active_event_id = event_id
+		if "debug_active_action_id" in system:
+			system.debug_active_action_id = action_id
+		if system.has_method("debug_push") and not block_id.is_empty():
+			system.debug_push("highlight", "▶ %s · %s" % [event_id, action_id if not action_id.is_empty() else "event"])
+	# Notify editor sheet UI during Play (remote debugger)
+	if EngineDebugger.is_active():
+		if block_id.is_empty() and event_id.is_empty():
+			EngineDebugger.send_message("flowkit:clear", [])
+		else:
+			EngineDebugger.send_message("flowkit:active", [block_id, event_id, action_id])
 
 func _debug(from: Node, kind: String, msg: String) -> void:
 	var system = get_node_or_null(_path_to_sys)

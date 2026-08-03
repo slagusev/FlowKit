@@ -88,9 +88,40 @@ func _enter_tree() -> void:
 	
 	_modal_related_prep()
 	_ensure_sheet_filter_ui()
+	_ensure_mute_toolbar()
 	_ensure_sheet_meta_panel()
 	_ensure_dirty_label()
 	_toggle_subs(true)
+	set_process(true)
+
+var _mute_on_btn: Button
+var _mute_off_btn: Button
+var _play_debug_label: Label
+var _last_play_tick: int = -1
+
+func _ensure_mute_toolbar() -> void:
+	if _mute_on_btn and is_instance_valid(_mute_on_btn):
+		return
+	var top_bar: Node = null
+	if menu_bar and menu_bar.get_parent():
+		top_bar = menu_bar.get_parent()
+	if top_bar == null:
+		return
+	_mute_off_btn = Button.new()
+	_mute_off_btn.text = "🔇 Mute"
+	_mute_off_btn.tooltip_text = "Disable selected events/items (Ctrl+Shift+D)"
+	_mute_off_btn.pressed.connect(func(): bulk_toggle_enabled(false))
+	top_bar.add_child(_mute_off_btn)
+	_mute_on_btn = Button.new()
+	_mute_on_btn.text = "🔊 Enable"
+	_mute_on_btn.tooltip_text = "Enable selected events/items (Ctrl+Shift+E)"
+	_mute_on_btn.pressed.connect(func(): bulk_toggle_enabled(true))
+	top_bar.add_child(_mute_on_btn)
+	_play_debug_label = Label.new()
+	_play_debug_label.text = ""
+	_play_debug_label.add_theme_font_size_override("font_size", 11)
+	_play_debug_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+	top_bar.add_child(_play_debug_label)
 
 var _sheet_meta_panel: FKSheetMetaPanel
 var _dirty_label: Label
@@ -761,9 +792,39 @@ func undo(): _undo()
 func redo(): _redo()
 func deselect_all(): _deselect_all()
 
+func _update_play_debug_ui() -> void:
+	if editor_globals == null:
+		return
+	var tick: int = int(editor_globals.debug_play_tick) if "debug_play_tick" in editor_globals else 0
+	var block_id: String = str(editor_globals.debug_play_block_id) if "debug_play_block_id" in editor_globals else ""
+	var event_id: String = str(editor_globals.debug_play_event_id) if "debug_play_event_id" in editor_globals else ""
+	var action_id: String = str(editor_globals.debug_play_action_id) if "debug_play_action_id" in editor_globals else ""
+	if _play_debug_label:
+		if block_id.is_empty() and event_id.is_empty():
+			_play_debug_label.text = ""
+		else:
+			var t := "▶ %s" % event_id
+			if not action_id.is_empty():
+				t += " · %s" % action_id
+			_play_debug_label.text = t
+	if tick == _last_play_tick:
+		return
+	_last_play_tick = tick
+	if block_id.is_empty() or blocks_container == null or scroll_container == null:
+		return
+	# Scroll first matching event row into view
+	for child in blocks_container.get_children():
+		if child is FKEventRowUi and child.has_method("get_block"):
+			var ed = child.get_block()
+			if ed and "block_id" in ed and str(ed.block_id) == block_id:
+				scroll_container.ensure_control_visible(child)
+				break
+
 func _process(delta: float) -> void:
 	if not is_fully_legit or not editor_interface:
 		return
+	
+	_update_play_debug_ui()
 	
 	# Handle drag spacers - add temporary space only when needed
 	if viewport.gui_is_dragging():
@@ -1422,12 +1483,17 @@ func bulk_toggle_enabled(enable: bool) -> void:
 	"""Enable/disable all multi-selected events, conditions, or actions."""
 	_push_undo_state()
 	for row in selection.selected_rows:
-		if row and row.has_method("get_event_data"):
-			var ed = row.get_event_data()
-			if ed and "enabled" in ed:
-				ed.enabled = enable
-				if row.has_method("update_display"):
-					row.update_display()
+		if row == null:
+			continue
+		var ed = null
+		if row.has_method("get_event_data"):
+			ed = row.get_event_data()
+		elif row.has_method("get_block"):
+			ed = row.get_block()
+		if ed and "enabled" in ed:
+			ed.enabled = enable
+			if row.has_method("update_display"):
+				row.update_display()
 	for it in selection.selected_items:
 		if it and it.has_method("get_block"):
 			var b = it.get_block()

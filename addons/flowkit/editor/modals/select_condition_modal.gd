@@ -153,10 +153,18 @@ func populate_conditions(node_path: String, node_class: String) -> void:
 		search_box.clear()
 		search_box.grab_focus()
 
+func _category_counts() -> Dictionary:
+	var counts: Dictionary = {}
+	for item in _all_items_cache:
+		var cat := str(item.get("category", "General"))
+		counts[cat] = int(counts.get(cat, 0)) + 1
+	return counts
+
 func _update_list(filter_text: String = "") -> void:
 	item_list.clear()
 	var filter_lower = filter_text.to_lower().strip_edges()
 	var last_cat := ""
+	var counts := _category_counts()
 	
 	for item in _all_items_cache:
 		var haystack := (
@@ -168,7 +176,8 @@ func _update_list(filter_text: String = "") -> void:
 		if filter_text.is_empty() or filter_lower in haystack:
 			var cat := str(item.get("category", "General"))
 			if cat != last_cat and filter_text.is_empty():
-				item_list.add_item("— %s —" % cat)
+				var n: int = int(counts.get(cat, 0))
+				item_list.add_item("— %s (%d) —" % [cat, n])
 				item_list.set_item_disabled(item_list.item_count - 1, true)
 				last_cat = cat
 			var star := "★ " if _favorites and _favorites.is_condition_favorite(str(item.get("id", ""))) else ""

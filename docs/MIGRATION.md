@@ -93,6 +93,13 @@
 | Signal reconnect on re-apply | Safer pack re-enable |
 | Export guide | See `docs/EXPORT.md` |
 
+## 3.8.x → 3.9
+
+| Change | Action |
+|--------|--------|
+| Play highlight | Editor debugger plugin auto-registered |
+| Mute button | On event rows; sheet data unchanged (`enabled`) |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

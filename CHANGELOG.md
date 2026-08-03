@@ -2,6 +2,22 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.9.0 — Event sheet focus: play highlight, mute UI, picker counts
+
+### Play / step highlight
+- `EditorDebuggerPlugin` bridges game → editor (`flowkit:active`)
+- Event rows pulse yellow for active block; action rows for current action
+- Toolbar shows `▶ event · action` and scrolls sheet to the active row
+
+### Mute / enable
+- Per-event **🔊/🔇** button on event header
+- Toolbar **Mute / Enable** (with multi-select)
+- Dimmed row when disabled
+
+### Pickers
+- Category headers include **counts**: `— CharacterBody2D (12) —`
+- Events/conditions/actions (icons already present)
+
 ## 3.8.1 — Polish (Object Mode UX, demos, export docs)
 
 ### UX

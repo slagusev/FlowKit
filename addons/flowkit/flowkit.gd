@@ -5,6 +5,7 @@ var action_registry: FKRegistry = FKRegistry.new()
 var generator: FKGenerator = null
 var inspector_plugin
 var export_plugin
+var debugger_plugin: FKEditorDebuggerPlugin
 var editor_main_screen
 var editor: FKMainEditor = null
 var editor_globals: FKEditorGlobals = FKEditorGlobals.new()
@@ -31,8 +32,14 @@ func _enter_tree() -> void:
 	
 	_create_and_add_custom_inspector()
 	_prep_export_plugin()
+	_prep_debugger_plugin()
 
 	print("[FlowKit]: Plugin loaded")
+
+func _prep_debugger_plugin() -> void:
+	debugger_plugin = FKEditorDebuggerPlugin.new()
+	debugger_plugin.globals = editor_globals
+	add_debugger_plugin(debugger_plugin)
 
 func _prep_editor_globals():
 	# Some of its dependencies will be injected by us, 
@@ -133,6 +140,10 @@ func _exit_tree() -> void:
 	if export_plugin:
 		remove_export_plugin(export_plugin)
 		export_plugin = null
+
+	if debugger_plugin:
+		remove_debugger_plugin(debugger_plugin)
+		debugger_plugin = null
 
 func _has_main_screen() -> bool:
 	return true
