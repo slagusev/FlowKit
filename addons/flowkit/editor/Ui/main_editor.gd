@@ -100,6 +100,60 @@ func _enter_tree() -> void:
 	set_process(true)
 	if menu_bar and not menu_bar.template_requested.is_connected(_on_template_requested):
 		menu_bar.template_requested.connect(_on_template_requested)
+	_fit_to_parent()
+	_connect_parent_resize()
+
+## Called by EditorPlugin when the FlowKit main-screen tab is selected.
+func _on_main_screen_shown() -> void:
+	_fit_to_parent()
+	# One more frame: main screen size is often finalized after _make_visible.
+	await get_tree().process_frame
+	_fit_to_parent()
+	if scroll_container and is_instance_valid(scroll_container):
+		scroll_container.queue_redraw()
+	if blocks_container and is_instance_valid(blocks_container):
+		blocks_container.queue_sort()
+		blocks_container.queue_redraw()
+	queue_redraw()
+
+func _connect_parent_resize() -> void:
+	var parent_ctrl := get_parent() as Control
+	if parent_ctrl == null:
+		return
+	if not parent_ctrl.resized.is_connected(_on_main_screen_parent_resized):
+		parent_ctrl.resized.connect(_on_main_screen_parent_resized)
+
+func _on_main_screen_parent_resized() -> void:
+	if visible:
+		_fit_to_parent()
+
+## Keep the editor root + full-rect children filling the main-screen host.
+func _fit_to_parent() -> void:
+	var parent_ctrl := get_parent() as Control
+	# Editor main-screen hosts frequently ignore anchors on plugin children until
+	# an explicit size is applied (especially right after tab switch).
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	position = Vector2.ZERO
+	if parent_ctrl and parent_ctrl.size.x > 1.0 and parent_ctrl.size.y > 1.0:
+		size = parent_ctrl.size
+	for child_name in ["Background", "OuterVBox"]:
+		var child := get_node_or_null(child_name) as Control
+		if child == null:
+			continue
+		child.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		child.position = Vector2.ZERO
+		if size.x > 1.0 and size.y > 1.0:
+			child.size = size
+	# Workspace HBox created at runtime for meta panel
+	var workspace := get_node_or_null("OuterVBox/SheetWorkspace") as Control
+	if workspace:
+		workspace.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		workspace.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	if scroll_container:
+		scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 var _templates_popup: PopupMenu
 
@@ -195,6 +249,7 @@ func _ensure_sheet_meta_panel() -> void:
 		var scroll_idx := scroll_container.get_index()
 		var hbox := HBoxContainer.new()
 		hbox.name = "SheetWorkspace"
+		hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		outer.add_child(hbox)
 		outer.move_child(hbox, scroll_idx)
@@ -204,6 +259,7 @@ func _ensure_sheet_meta_panel() -> void:
 		scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_sheet_meta_panel = FKSheetMetaPanel.new()
 		_sheet_meta_panel.setup(editor_globals)
+		_sheet_meta_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_sheet_meta_panel.meta_changed.connect(_on_sheet_meta_changed)
 		_sheet_meta_panel.add_subsheet_action_requested.connect(_on_add_subsheet_action)
 		_sheet_meta_panel.edit_subsheet_action_requested.connect(_on_edit_subsheet_action)
@@ -421,6 +477,10 @@ var _is_subbed := false
 	
 func _on_visibility_changed():
 	editor_globals.sheet_editor_visible = self.visible
+	if visible:
+		# Tab switch can leave a zero/stale size until the next frame.
+		_fit_to_parent()
+		call_deferred("_fit_to_parent")
 
 func _toggle_modal_signal_subs(on: bool):
 	if on and !_is_subbed:

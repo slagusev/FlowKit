@@ -149,8 +149,31 @@ func _has_main_screen() -> bool:
 	return true
 
 func _make_visible(visible: bool) -> void:
-	if editor:
-		editor.visible = visible
+	if editor == null:
+		return
+	editor.visible = visible
+	# Main-screen hosts often leave the child at a stale/zero size until resize.
+	# Force full-rect layout when the FlowKit tab becomes active.
+	if visible:
+		_fit_main_editor_layout()
+		# Second pass after the editor main screen finishes its own layout.
+		if editor.is_inside_tree():
+			editor.call_deferred("_on_main_screen_shown")
+		else:
+			_fit_main_editor_layout()
+
+func _fit_main_editor_layout() -> void:
+	if editor == null or not is_instance_valid(editor):
+		return
+	var parent_ctrl := editor.get_parent() as Control
+	editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	editor.position = Vector2.ZERO
+	if parent_ctrl:
+		editor.size = parent_ctrl.size
+	if editor.has_method("_fit_to_parent"):
+		editor._fit_to_parent()
 
 func _get_plugin_name() -> String:
 	return "FlowKit"

@@ -20,7 +20,7 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [node name="Control" type="Control" unique_id=945005444 node_paths=PackedStringArray("scroll_container", "blocks_container", "empty_label", "add_event_btn", "menu_bar")]
-layout_mode = 3
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -28,6 +28,7 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+mouse_filter = 0
 script = ExtResource("1_gkvd7")
 scroll_container = NodePath("OuterVBox/ScrollContainer")
 blocks_container = NodePath("OuterVBox/ScrollContainer/MarginContainer/BlocksContainer")

@@ -2,6 +2,11 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.10.2 — Main screen layout on tab switch
+
+### Fixed
+- **FlowKit tab layout**: panel no longer stays zero/stale size when switching to the FlowKit main-screen tab. Forces full-rect fit on show, deferred refresh, and parent resize.
+
 ## 3.10.1 — Plugin import fix
 
 ### Fixed
