@@ -2,6 +2,14 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 2.6.0 — Favorites everywhere, subsheet node pick, CI, provider matrix
+
+### Added
+- **Favorites** for events and conditions (★, Ctrl/right-click) — same UX as actions
+- **Subsheet Add Action** starts with **node picker** (any scene node or System), then action
+- `tools/generate_provider_matrix.gd` → `docs/PROVIDER_MATRIX.md`
+- GitHub Actions workflow `.github/workflows/tests.yml` (GUT + matrix gen)
+
 ## 2.5.0 — Subsheet editor, favorites, sheet-var snippets
 
 ### Added

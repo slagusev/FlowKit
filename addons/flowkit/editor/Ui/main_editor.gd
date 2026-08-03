@@ -124,10 +124,15 @@ func _on_add_subsheet_action(subsheet_index: int) -> void:
 	pending_subsheet_index = subsheet_index
 	pending_subsheet_action_index = -1
 	pending_block_type = "subsheet_action"
-	pending_node_path = "System"
-	# Pick action for System (most subsheet actions are system-level; user can still pick node later via path)
-	select_action_modal.populate_actions("System", "System")
-	_popup_centered_on_editor(select_action_modal)
+	# First pick any scene node (or System), then choose an action for that type
+	var scene_root := editor_interface.get_edited_scene_root() if editor_interface else null
+	if scene_root:
+		select_node_modal.populate_from_scene(scene_root)
+		_popup_centered_on_editor(select_node_modal)
+	else:
+		pending_node_path = "System"
+		select_action_modal.populate_actions("System", "System")
+		_popup_centered_on_editor(select_action_modal)
 
 func _on_edit_subsheet_action(subsheet_index: int, action_index: int) -> void:
 	if subsheet_index < 0 or subsheet_index >= editor_globals.sheet_subsheets.size():
@@ -1450,7 +1455,7 @@ func _on_node_selected(node_path: String, node_class: String) -> void:
 		"condition", "condition_replace":
 			select_condition_modal.populate_conditions(node_path, node_class)
 			_popup_centered_on_editor(select_condition_modal)
-		"action", "action_replace":
+		"action", "action_replace", "subsheet_action":
 			select_action_modal.populate_actions(node_path, node_class)
 			_popup_centered_on_editor(select_action_modal)
 		"branch_condition", "branch_condition_edit", "elseif_condition":

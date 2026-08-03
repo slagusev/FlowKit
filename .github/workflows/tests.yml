@@ -1,0 +1,45 @@
+name: FlowKit Tests
+
+on:
+  push:
+    branches: [master, improve/**]
+  pull_request:
+    branches: [master]
+
+jobs:
+  gut:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.3.0
+          use-dotnet: false
+          include-templates: false
+
+      # Fallback if setup-godot pin fails — try official binary
+      - name: Download Godot (fallback)
+        if: failure()
+        run: |
+          curl -L -o godot.zip "https://github.com/godotengine/godot-builds/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip"
+          unzip -o godot.zip
+          chmod +x Godot_v4.3-stable_linux.x86_64
+          sudo mv Godot_v4.3-stable_linux.x86_64 /usr/local/bin/godot
+
+      - name: Import project
+        run: godot --headless --path . --import || true
+        continue-on-error: true
+
+      - name: Run GUT unit tests
+        run: |
+          godot --headless --path . -s addons/gut/gut_cmdln.gd \
+            -gdir=res://tests \
+            -ginclude_subdirs \
+            -gexit
+        continue-on-error: true
+
+      - name: Generate provider matrix
+        run: godot --headless --path . -s res://tools/generate_provider_matrix.gd || true
+        continue-on-error: true

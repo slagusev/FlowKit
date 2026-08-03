@@ -12,7 +12,16 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - This fork: https://github.com/slagusev/FlowKit  
 - Site assets (fork): `website/` in this repo  
 
-## What's different in this fork (2.5)
+## What's different in this fork (2.6)
+
+- Favorites for **actions, events, and conditions**
+- Subsheet actions: pick **any node**, then action
+- Provider matrix: `docs/PROVIDER_MATRIX.md` (regenerate via `tools/generate_provider_matrix.gd`)
+- CI workflow for tests
+
+---
+
+## Earlier (2.5)
 
 - **Subsheet action editor** — select a subsheet → Add/Edit/Remove/reorder actions
 - **Favorites** in action picker (★, Ctrl+click / right-click)
