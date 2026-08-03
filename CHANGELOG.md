@@ -2,6 +2,12 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.10.3 — Scroll + main screen layout (real fix)
+
+### Fixed
+- **No scrolling** in event sheet: ScrollContainer content had `SIZE_EXPAND_FILL` vertically, so content height always matched the viewport (classic Godot trap). Content now grows with rows; vertical scroll works.
+- **Crooked / clipped panel on tab switch**: fit + scroll flags re-applied after parent attach; multi-frame layout settle; meta panel no longer steals expand width incorrectly.
+
 ## 3.10.2 — Main screen layout on tab switch
 
 ### Fixed

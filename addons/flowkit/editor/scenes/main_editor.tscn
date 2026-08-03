@@ -117,12 +117,15 @@ flat = true
 
 [node name="ScrollContainer" type="ScrollContainer" parent="OuterVBox" unique_id=917670392]
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="OuterVBox/ScrollContainer" unique_id=2007415918]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+size_flags_vertical = 0
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 12
@@ -131,18 +134,21 @@ theme_override_constants/margin_bottom = 8
 [node name="BlocksContainer" type="VBoxContainer" parent="OuterVBox/ScrollContainer/MarginContainer" unique_id=931178981]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+size_flags_vertical = 0
 theme_override_constants/separation = 2
 script = ExtResource("3_xf0se")
 
 [node name="EmptyLabel" type="Label" parent="OuterVBox/ScrollContainer/MarginContainer/BlocksContainer" unique_id=1552208958]
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_horizontal = 3
+size_flags_vertical = 0
 theme_override_colors/font_color = Color(1, 0.53, 0.47, 1)
 theme_override_font_sizes/font_size = 21
 text = "No actions available (Is this a new scene? Please make a new event sheet)"
 horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="BottomMargin" type="MarginContainer" parent="OuterVBox" unique_id=1343668272]
 layout_mode = 2

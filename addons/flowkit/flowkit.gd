@@ -106,7 +106,16 @@ func _add_runtime_autoloads():
 func _register_as_main_screen_plugin():
 	editor_main_screen = editor_interface.get_editor_main_screen()
 	editor_main_screen.add_child(editor)
-	
+	# Now that we have a parent, pin full-rect flags (legitimize runs pre-parent).
+	if editor:
+		editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		if editor.has_method("_connect_parent_resize"):
+			editor._connect_parent_resize()
+		if editor.has_method("_configure_scroll_layout"):
+			editor._configure_scroll_layout()
+
 func _create_and_add_custom_inspector():
 	# Create and add custom inspector
 	inspector_plugin = FKEditorInspectorPlugin.new()

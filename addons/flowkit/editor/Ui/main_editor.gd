@@ -100,15 +100,21 @@ func _enter_tree() -> void:
 	set_process(true)
 	if menu_bar and not menu_bar.template_requested.is_connected(_on_template_requested):
 		menu_bar.template_requested.connect(_on_template_requested)
-	_fit_to_parent()
-	_connect_parent_resize()
+	_configure_scroll_layout()
+	# Parent may still be null here (legitimize runs before add_child) — fit on show.
 
 ## Called by EditorPlugin when the FlowKit main-screen tab is selected.
 func _on_main_screen_shown() -> void:
+	_connect_parent_resize()
+	_configure_scroll_layout()
 	_fit_to_parent()
-	# One more frame: main screen size is often finalized after _make_visible.
-	await get_tree().process_frame
-	_fit_to_parent()
+	# Host size is often finalized 1–2 frames after tab switch.
+	for _i in 3:
+		await get_tree().process_frame
+		if not is_inside_tree() or not visible:
+			return
+		_fit_to_parent()
+		_configure_scroll_layout()
 	if scroll_container and is_instance_valid(scroll_container):
 		scroll_container.queue_redraw()
 	if blocks_container and is_instance_valid(blocks_container):
@@ -122,38 +128,73 @@ func _connect_parent_resize() -> void:
 		return
 	if not parent_ctrl.resized.is_connected(_on_main_screen_parent_resized):
 		parent_ctrl.resized.connect(_on_main_screen_parent_resized)
+	if not resized.is_connected(_on_self_resized):
+		resized.connect(_on_self_resized)
 
 func _on_main_screen_parent_resized() -> void:
 	if visible:
 		_fit_to_parent()
 
-## Keep the editor root + full-rect children filling the main-screen host.
-func _fit_to_parent() -> void:
-	var parent_ctrl := get_parent() as Control
-	# Editor main-screen hosts frequently ignore anchors on plugin children until
-	# an explicit size is applied (especially right after tab switch).
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	position = Vector2.ZERO
-	if parent_ctrl and parent_ctrl.size.x > 1.0 and parent_ctrl.size.y > 1.0:
-		size = parent_ctrl.size
+func _on_self_resized() -> void:
+	if not visible:
+		return
+	# Keep full-rect children in sync when host changes our size.
 	for child_name in ["Background", "OuterVBox"]:
 		var child := get_node_or_null(child_name) as Control
-		if child == null:
-			continue
-		child.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		child.position = Vector2.ZERO
-		if size.x > 1.0 and size.y > 1.0:
+		if child and size.x > 1.0 and size.y > 1.0:
+			child.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			child.size = size
-	# Workspace HBox created at runtime for meta panel
+			child.position = Vector2.ZERO
+
+## ScrollContainer only scrolls if its *content* does NOT expand vertically.
+## EXPAND_FILL on the child makes content height == viewport → no scrollbar.
+func _configure_scroll_layout() -> void:
+	if scroll_container and is_instance_valid(scroll_container):
+		scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		scroll_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		scroll_container.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+		scroll_container.clip_contents = true
+		# Direct child (MarginContainer): grow with content, fill width only.
+		if scroll_container.get_child_count() > 0:
+			var content := scroll_container.get_child(0) as Control
+			if content:
+				content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				content.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	if blocks_container and is_instance_valid(blocks_container):
+		blocks_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		blocks_container.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	if empty_label and is_instance_valid(empty_label):
+		empty_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		empty_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		if empty_label.custom_minimum_size.y < 80.0:
+			empty_label.custom_minimum_size.y = 120.0
 	var workspace := get_node_or_null("OuterVBox/SheetWorkspace") as Control
 	if workspace:
 		workspace.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		workspace.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	if scroll_container:
-		scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+## Keep the editor root filling the main-screen host.
+func _fit_to_parent() -> void:
+	if not is_inside_tree():
+		return
+	var parent_ctrl := get_parent() as Control
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	position = Vector2.ZERO
+	# Prefer host size; fall back to the editor viewport work area.
+	var target := Vector2.ZERO
+	if parent_ctrl and parent_ctrl.size.x > 1.0 and parent_ctrl.size.y > 1.0:
+		target = parent_ctrl.size
+	elif editor_globals and editor_globals.editor_interface:
+		var base := editor_globals.editor_interface.get_base_control() as Control
+		if base:
+			target = base.size * 0.85
+	if target.x > 1.0 and target.y > 1.0:
+		size = target
+	_on_self_resized()
+	_configure_scroll_layout()
 
 var _templates_popup: PopupMenu
 
@@ -259,13 +300,16 @@ func _ensure_sheet_meta_panel() -> void:
 		scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_sheet_meta_panel = FKSheetMetaPanel.new()
 		_sheet_meta_panel.setup(editor_globals)
+		_sheet_meta_panel.size_flags_horizontal = Control.SIZE_SHRINK_END
 		_sheet_meta_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_sheet_meta_panel.custom_minimum_size = Vector2(280, 0)
 		_sheet_meta_panel.meta_changed.connect(_on_sheet_meta_changed)
 		_sheet_meta_panel.add_subsheet_action_requested.connect(_on_add_subsheet_action)
 		_sheet_meta_panel.edit_subsheet_action_requested.connect(_on_edit_subsheet_action)
 		_sheet_meta_panel.retarget_subsheet_action_requested.connect(_on_retarget_subsheet_action)
 		_sheet_meta_panel.rechoose_subsheet_action_requested.connect(_on_rechoose_subsheet_action)
 		hbox.add_child(_sheet_meta_panel)
+		_configure_scroll_layout()
 
 var pending_subsheet_index: int = -1
 var pending_subsheet_action_index: int = -1
@@ -478,7 +522,8 @@ var _is_subbed := false
 func _on_visibility_changed():
 	editor_globals.sheet_editor_visible = self.visible
 	if visible:
-		# Tab switch can leave a zero/stale size until the next frame.
+		_connect_parent_resize()
+		_configure_scroll_layout()
 		_fit_to_parent()
 		call_deferred("_fit_to_parent")
 
