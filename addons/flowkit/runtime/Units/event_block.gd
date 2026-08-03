@@ -9,6 +9,17 @@ class_name FKEventUnit
 @export var conditions: Array[FKConditionUnit] = []
 @export var actions: Array[FKActionUnit] = []
 
+## When false, the event is skipped at runtime (still visible in editor).
+@export var enabled: bool = true
+## Fire at most once for the lifetime of the loaded sheet.
+@export var trigger_once: bool = false
+## Fire only on the rising edge of condition pass (once while true).
+@export var once_while_true: bool = false
+
+## Runtime-only (not serialized intentionally via @export_storage for save size).
+var _runtime_triggered: bool = false
+var _runtime_was_passing: bool = false
+
 func may_have_children() -> bool:
 	return true
 
@@ -47,6 +58,9 @@ func serialize() -> Dictionary:
 		"event_id": event_id,
 		"target_node": str(target_node),
 		"inputs": inputs.duplicate(),
+		"enabled": enabled,
+		"trigger_once": trigger_once,
+		"once_while_true": once_while_true,
 		"conditions": [],
 		"actions": []
 	}
@@ -66,6 +80,11 @@ func deserialize(dict: Dictionary) -> void:
 	event_id = dict.get("event_id", "")
 	target_node = NodePath(dict.get("target_node", ""))
 	inputs = dict.get("inputs", {}).duplicate()
+	enabled = dict.get("enabled", true)
+	trigger_once = dict.get("trigger_once", false)
+	once_while_true = dict.get("once_while_true", false)
+	_runtime_triggered = false
+	_runtime_was_passing = false
 
 	conditions = []
 	for cond_dict in dict.get("conditions", []):
@@ -88,6 +107,9 @@ func duplicate_block() -> FKUnit:
 	copy.event_id = event_id
 	copy.target_node = target_node
 	copy.inputs = inputs.duplicate(true)
+	copy.enabled = enabled
+	copy.trigger_once = trigger_once
+	copy.once_while_true = once_while_true
 	
 	var duplicated_conds: Array[FKConditionUnit] = ArrayUtils.make_fk_condition_dupes(self.conditions)
 	copy.conditions.clear()

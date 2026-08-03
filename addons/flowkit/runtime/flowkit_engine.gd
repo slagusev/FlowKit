@@ -19,8 +19,25 @@ func _ready() -> void:
 
 	print("[FlowKit] Engine initialized.")
 
+	# Debug overlay in debug builds (or when project setting enabled)
+	call_deferred("_maybe_add_debug_overlay")
+
 	# Do a deferred check in case the scene is already present at startup.
 	call_deferred("_check_current_scene")
+
+func _maybe_add_debug_overlay() -> void:
+	var enable := OS.is_debug_build()
+	if ProjectSettings.has_setting("flowkit/debug_overlay"):
+		enable = bool(ProjectSettings.get_setting("flowkit/debug_overlay"))
+	if not enable:
+		return
+	if get_node_or_null("FKDebugOverlay"):
+		return
+	var overlay_script = load("res://addons/flowkit/runtime/debug_overlay.gd")
+	if overlay_script:
+		var overlay = overlay_script.new()
+		overlay.name = "FKDebugOverlay"
+		add_child(overlay)
 
 var _is_physics_frame: bool = false  # Tracks which callback is currently running
 
@@ -127,10 +144,16 @@ func _load_sheets_for_scene(scene_root: Node) -> void:
 			for block in sheet.events:
 				if block:
 					block.ensure_block_id()
+					block._runtime_triggered = false
+					block._runtime_was_passing = false
 			# Also ensure block IDs for events inside groups
 			_ensure_block_ids_in_groups(sheet.groups)
 			var entry := {"sheet": sheet, "root": node_root, "scene_name": scene_name, "uid": uid}
 			active_sheets.append(entry)
+			# Init sheet-local variables on FlowKitSystem
+			var system = get_node_or_null(_path_to_sys)
+			if system and system.has_method("init_sheet_vars"):
+				system.init_sheet_vars(uid, sheet.build_sheet_var_defaults())
 			# Create per-block event provider instances (each block gets its own)
 			_create_block_providers(entry)
 			# Setup signal-based events so they can connect to node signals
@@ -184,6 +207,7 @@ func _run_sheet(entry: Dictionary) -> void:
 	# Entry is a dictionary with keys: "sheet" and "root"
 	var sheet: FKEventSheet = entry.get("sheet", null)
 	var root_node: Node = entry.get("root", null)
+	var sheet_uid: int = int(entry.get("uid", 0))
 
 	if not sheet:
 		return
@@ -193,6 +217,13 @@ func _run_sheet(entry: Dictionary) -> void:
 	if not current_root or not is_instance_valid(current_root):
 		# If the root is invalid, skip this sheet
 		return
+
+	# Bind sheet context for expressions / sheet vars / call subsheet
+	var system = get_node_or_null(_path_to_sys)
+	if system and system.has_method("set_active_sheet"):
+		system.set_active_sheet(sheet_uid)
+	# Store on self for actions that call run_subsheet
+	_active_entry = entry
 
 	# Process standalone conditions (run every frame)
 	for standalone_cond in sheet.standalone_conditions:
@@ -218,6 +249,8 @@ func _run_sheet(entry: Dictionary) -> void:
 
 	# Process each block individually
 	for block in all_events:
+		if block == null or not block.enabled:
+			continue
 		# Resolve target node for polling
 		var target: String = block.target_node
 		var node: Node = _resolve_target(target, current_root)
@@ -252,7 +285,9 @@ func _run_sheet(entry: Dictionary) -> void:
 			continue
 
 		# Execute the block's conditions and actions
-		_execute_block(block, current_root)
+		_execute_block(block, current_root, sheet_uid)
+
+var _active_entry: Dictionary = {}
 # --- Signal event lifecycle -------------------------------------------------
 
 ## Set up signal-based events for a loaded sheet entry.
@@ -261,12 +296,15 @@ func _run_sheet(entry: Dictionary) -> void:
 func _setup_signal_events(entry: Dictionary) -> void:
 	var sheet: FKEventSheet = entry.get("sheet", null)
 	var root_node: Node = entry.get("root", null)
+	var sheet_uid: int = int(entry.get("uid", 0))
 	if not sheet or not root_node or not is_instance_valid(root_node):
 		return
 
 	var all_events: Array = sheet.get_all_events()
 
 	for block in all_events:
+		if block == null or not block.enabled:
+			continue
 		var provider = _block_event_providers.get(block.block_id, null)
 		if not provider:
 			continue
@@ -280,7 +318,7 @@ func _setup_signal_events(entry: Dictionary) -> void:
 			continue
 
 		# Build a trigger callback that runs this block's conditions & actions
-		var trigger_cb: Callable = _make_trigger_callback(block, root_node)
+		var trigger_cb: Callable = _make_trigger_callback(block, root_node, sheet_uid)
 		if provider.has_method("setup"):
 			provider.setup(node, trigger_cb, block.block_id)
 
@@ -309,20 +347,45 @@ func _teardown_all_signal_events() -> void:
 
 ## Create a Callable that evaluates a block's conditions and runs its actions.
 ## This is what signal events call when their signal fires.
-func _make_trigger_callback(block: FKEventUnit, current_root: Node) -> Callable:
+func _make_trigger_callback(block: FKEventUnit, current_root: Node, sheet_uid: int = 0) -> Callable:
 	return func() -> void:
 		if not is_instance_valid(current_root):
 			return
-		_execute_block(block, current_root)
+		_execute_block(block, current_root, sheet_uid)
 
 ## Execute a single event block: check all conditions, then run all actions.
 ## Shared by both the poll loop and signal-based trigger callbacks.
-func _execute_block(block: FKEventUnit, current_root: Node) -> void:
-	if not _conditions_pass(block.conditions, current_root, block.block_id):
+func _execute_block(block: FKEventUnit, current_root: Node, sheet_uid: int = 0) -> void:
+	if block == null or not block.enabled:
 		return
-
+	if block.trigger_once and block._runtime_triggered:
+		return
+	
+	var cond_ok := _conditions_pass(block.conditions, current_root, block.block_id)
+	
+	if block.once_while_true:
+		if cond_ok and block._runtime_was_passing:
+			return  # still true from last frame — skip
+		if not cond_ok:
+			block._runtime_was_passing = false
+			return
+		block._runtime_was_passing = true
+	elif not cond_ok:
+		_debug(current_root, "cond_fail", "Event %s conditions failed" % block.event_id)
+		return
+	
+	if block.trigger_once:
+		block._runtime_triggered = true
+	
+	_debug(current_root, "event", "Fired %s on %s" % [block.event_id, str(block.target_node)])
+	
 	# Execute all actions (with branch support, including nested branches)
 	await _execute_actions_list(block.actions, current_root, block.block_id)
+
+func _debug(from: Node, kind: String, msg: String) -> void:
+	var system = get_node_or_null(_path_to_sys)
+	if system and system.has_method("debug_push"):
+		system.debug_push(kind, msg)
 
 ## Evaluate event conditions with OR groups:
 ## - Conditions with or_with_previous=false start a new AND-group
@@ -372,6 +435,50 @@ func _check_single_condition(cond: FKConditionUnit, current_root: Node, block_id
 ## Used by both _execute_block (top-level actions) and nested branches.
 func _execute_actions_list(actions: Array, current_root: Node, block_id: String) -> void:
 	await _branch_executor._execute_actions(actions, current_root, block_id)
+
+## Run a named subsheet's actions (called from Call Subsheet action).
+func run_subsheet(sub_name: String, current_root: Node = null) -> void:
+	var entry := _active_entry
+	var sheet: FKEventSheet = entry.get("sheet", null)
+	if sheet == null:
+		for e in active_sheets:
+			if e.get("root") == current_root:
+				sheet = e.get("sheet")
+				entry = e
+				break
+	if sheet == null:
+		push_warning("[FlowKit] run_subsheet: no active sheet for '%s'" % sub_name)
+		return
+	var sub = sheet.find_subsheet(sub_name)
+	if sub == null:
+		push_warning("[FlowKit] Subsheet not found: '%s'" % sub_name)
+		return
+	var root: Node = current_root if current_root else entry.get("root")
+	_debug(root, "subsheet", "Call subsheet '%s'" % sub_name)
+	await _execute_actions_list(sub.actions, root, "subsheet_" + sub_name)
+
+## Find nodes in scene by group and/or class for For Each.
+func find_nodes_for_each(root: Node, group_name: String, class_name_str: String) -> Array:
+	var results: Array = []
+	if root == null:
+		return results
+	var g := group_name.strip_edges()
+	var c := class_name_str.strip_edges()
+	if not g.is_empty():
+		var from_group = root.get_tree().get_nodes_in_group(g)
+		for n in from_group:
+			if c.is_empty() or n.get_class() == c or ClassDB.is_parent_class(n.get_class(), c):
+				results.append(n)
+		return results
+	if not c.is_empty():
+		_collect_by_class(root, c, results)
+	return results
+
+func _collect_by_class(node: Node, class_name_str: String, out: Array) -> void:
+	if node.get_class() == class_name_str or ClassDB.is_parent_class(node.get_class(), class_name_str):
+		out.append(node)
+	for child in node.get_children():
+		_collect_by_class(child, class_name_str, out)
 	
 func _is_multi_frame_provider(provider: Variant) -> bool:
 	return provider and provider.has_method("requires_multi_frames") and provider.requires_multi_frames()

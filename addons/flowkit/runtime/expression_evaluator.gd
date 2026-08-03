@@ -44,6 +44,13 @@ target_node: Node = null, expected_type: int = -1) -> Variant:
 				return _check_type(result.value, expected_type, expr_str)
 			# Variable not found - still try as expression below
 	
+	# Sheet variable shorthand: s_score
+	if expr_str.begins_with("s_") and expr_str.substr(2).is_valid_identifier():
+		var s_name := expr_str.substr(2)
+		var s_val := _resolve_sheet_var(context_node if context_node else scene_root, s_name)
+		if s_val.success:
+			return _check_type(s_val.value, expected_type, expr_str)
+	
 	# Try to parse as a literal value first
 	var literal_result := _try_parse_literal(expr_str)
 	if literal_result.success:
@@ -55,13 +62,36 @@ target_node: Node = null, expected_type: int = -1) -> Variant:
 		return _check_type(expr_result.value, expected_type, expr_str)
 	
 	# Evaluation failed - do not fall back to raw string
-	push_error("FlowKit: Failed to evaluate expression: '%s'" % expr_str)
+	var err_msg := "FlowKit: Failed to evaluate expression: '%s'" % expr_str
+	push_error(err_msg)
+	_push_debug_error(context_node if context_node else scene_root, err_msg)
 	return null
+
+static func _push_debug_error(from_node: Node, msg: String) -> void:
+	if from_node == null or from_node.get_tree() == null:
+		return
+	var system = from_node.get_tree().root.get_node_or_null("/root/FlowKitSystem")
+	if system and system.has_method("debug_push"):
+		system.debug_push("expr_error", msg)
+
+## Simple expression cache (string + identity of context class) — cleared never for simplicity
+## but capped. Used for hot paths like on_process conditions.
+static var _expr_cache: Dictionary = {}
+static var _expr_cache_order: Array = []
+const _EXPR_CACHE_MAX := 256
 
 
 ## Resolve an n_ variable from a node. Checks FlowKitSystem node variables first,
 ## then node metadata (inspector-defined), then script properties.
 ## Returns an FKEvalResult to distinguish 'not found' from 'found with value null'.
+static func _resolve_sheet_var(from_node: Node, var_name: String) -> FKEvalResult:
+	if from_node == null or from_node.get_tree() == null:
+		return FKEvalResult.failed()
+	var system = from_node.get_tree().root.get_node_or_null("/root/FlowKitSystem")
+	if system and system.has_method("has_sheet_var") and system.has_sheet_var(var_name):
+		return FKEvalResult.succeeded(system.get_sheet_var(var_name, null))
+	return FKEvalResult.failed()
+
 static func _resolve_n_variable(node: Node, var_name: String) -> FKEvalResult:
 	var system = node.get_tree().root.get_node_or_null("/root/FlowKitSystem")
 	if system and system.has_method("get_node_var"):
@@ -285,6 +315,27 @@ target_node: Node = null) -> FKEvalResult:
 				if not input_names.has(var_name):
 					input_names.append(var_name)
 					input_values.append(system.variables[var_name])
+		
+		# Sheet-local variables: bare names + s_ prefix
+		if "current_sheet_vars" in system and system.current_sheet_vars is Dictionary:
+			for var_name in system.current_sheet_vars.keys():
+				var sval = system.current_sheet_vars[var_name]
+				if not input_names.has(var_name):
+					input_names.append(var_name)
+					input_values.append(sval)
+				var skey := "s_" + str(var_name)
+				if not input_names.has(skey):
+					input_names.append(skey)
+					input_values.append(sval)
+		
+		# For Each current node
+		if "current" in system and system.current != null:
+			if not input_names.has("current"):
+				input_names.append("current")
+				input_values.append(system.current)
+			if not input_names.has("current_node"):
+				input_names.append("current_node")
+				input_values.append(system.current)
 	
 	# Inject node metadata alterables (works even without FlowKitSystem).
 	var n_node_meta: Node = target_node if target_node else context_node

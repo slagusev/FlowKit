@@ -84,7 +84,65 @@ func _enter_tree() -> void:
 	
 	_modal_related_prep()
 	_ensure_sheet_filter_ui()
+	_ensure_sheet_meta_panel()
+	_ensure_dirty_label()
 	_toggle_subs(true)
+
+var _sheet_meta_panel: FKSheetMetaPanel
+var _dirty_label: Label
+
+func _ensure_sheet_meta_panel() -> void:
+	if _sheet_meta_panel and is_instance_valid(_sheet_meta_panel):
+		return
+	# Place panel to the right of the scroll area
+	var outer: Node = scroll_container.get_parent() if scroll_container else null
+	if outer == null:
+		return
+	# Rebuild as HBox: [Scroll | Meta]
+	if outer is VBoxContainer:
+		var scroll_idx := scroll_container.get_index()
+		var hbox := HBoxContainer.new()
+		hbox.name = "SheetWorkspace"
+		hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		outer.add_child(hbox)
+		outer.move_child(hbox, scroll_idx)
+		outer.remove_child(scroll_container)
+		hbox.add_child(scroll_container)
+		scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_sheet_meta_panel = FKSheetMetaPanel.new()
+		_sheet_meta_panel.setup(editor_globals)
+		_sheet_meta_panel.meta_changed.connect(_on_sheet_meta_changed)
+		hbox.add_child(_sheet_meta_panel)
+
+func _ensure_dirty_label() -> void:
+	if _dirty_label and is_instance_valid(_dirty_label):
+		return
+	if menu_bar and menu_bar.get_parent():
+		_dirty_label = Label.new()
+		_dirty_label.text = ""
+		_dirty_label.add_theme_color_override("font_color", Color(1.0, 0.75, 0.3))
+		menu_bar.get_parent().add_child(_dirty_label)
+		menu_bar.get_parent().move_child(_dirty_label, 1)
+
+func _on_sheet_meta_changed() -> void:
+	editor_globals.sheet_dirty = true
+	_update_dirty_indicator()
+	if auto_save_sheets:
+		_save_sheet()
+
+func _update_dirty_indicator() -> void:
+	if _dirty_label == null:
+		return
+	_dirty_label.text = "● Unsaved" if editor_globals.sheet_dirty else ""
+
+func _refresh_sheet_meta_panel() -> void:
+	if _sheet_meta_panel and is_instance_valid(_sheet_meta_panel):
+		_sheet_meta_panel.refresh()
+
+func mark_sheet_dirty() -> void:
+	editor_globals.sheet_dirty = true
+	_update_dirty_indicator()
 
 func _ensure_sheet_filter_ui() -> void:
 	if sheet_filter_edit and is_instance_valid(sheet_filter_edit):
@@ -110,6 +168,12 @@ func _ensure_sheet_filter_ui() -> void:
 func _on_sheet_filter_changed(new_text: String) -> void:
 	_sheet_filter_text = new_text.strip_edges().to_lower()
 	_apply_sheet_filter()
+	# Jump-to: scroll first match into view
+	if not _sheet_filter_text.is_empty() and scroll_container and blocks_container:
+		for child in blocks_container.get_children():
+			if child is Control and child.visible and child != empty_label:
+				scroll_container.ensure_control_visible(child)
+				break
 
 func _apply_sheet_filter() -> void:
 	if not blocks_container:
@@ -129,6 +193,14 @@ func _apply_sheet_filter() -> void:
 		var match_found := filter in haystack
 		ctrl.visible = match_found
 		ctrl.modulate = Color.WHITE if match_found else Color(1, 1, 1, 0.35)
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.ctrl_pressed and event.keycode == KEY_F:
+			if sheet_filter_edit:
+				sheet_filter_edit.grab_focus()
+				sheet_filter_edit.select_all()
+				get_viewport().set_input_as_handled()
 
 func _unit_ui_search_text(unit_ui: Node) -> String:
 	var parts: PackedStringArray = []
@@ -813,6 +885,15 @@ func _get_block_nodes() -> Array[FKUnitUi]:
 func _populate_from_sheet(sheet: FKEventSheet) -> void:
 	blocks_container.clear_unit_nodes()
 
+	# Cache sheet metadata for save round-trips
+	editor_globals.sheet_var_defs = sheet.sheet_var_defs.duplicate(true) if sheet else []
+	editor_globals.sheet_subsheets = []
+	if sheet:
+		for s in sheet.subsheets:
+			editor_globals.sheet_subsheets.append(s)
+	editor_globals.sheet_dirty = false
+	_refresh_sheet_meta_panel()
+
 	# Use the sheet’s own ordered_items list
 	for unit in sheet.ordered_items:
 		var ui := unit_ui_factory.unit_ui_from(unit)
@@ -824,6 +905,7 @@ func _populate_from_sheet(sheet: FKEventSheet) -> void:
 	else:
 		_show_content_state()
 	_apply_sheet_filter()
+	_update_dirty_indicator()
 
 func _wire_signals(unit: FKUnitUi):
 	if unit is FKCommentUi:
@@ -844,10 +926,18 @@ func _save_sheet() -> FKEventSheet:
 	var units := blocks_container.units
 		
 	var sheet := FKEventSheet.from_units(units)
+	# Preserve sheet-level metadata (variables + subsheets)
+	sheet.sheet_var_defs = editor_globals.sheet_var_defs.duplicate(true)
+	sheet.subsheets = []
+	for s in editor_globals.sheet_subsheets:
+		if s != null:
+			sheet.subsheets.append(s)
 	var err := sheet_io.save_sheet(current_scene_uid, sheet, current_scene_name)
 	var result: FKEventSheet = null
 	if err == OK:
 		print("[FKMainEditor]: ✓ Event sheet saved")
+		editor_globals.sheet_dirty = false
+		_update_dirty_indicator()
 		result = sheet
 	else:
 		push_error("[FKMainEditor]: Failed to save event sheet: ", err)

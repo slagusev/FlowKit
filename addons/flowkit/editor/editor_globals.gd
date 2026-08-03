@@ -34,6 +34,11 @@ var current_scene_uid: int = 0
 ## Basename of the currently edited scene (for human-readable sheet filenames).
 var current_scene_name: String = ""
 
+## Sheet metadata preserved across rebuilds from UI units.
+var sheet_var_defs: Array[Dictionary] = []
+var sheet_subsheets: Array = []  # Array of FKSubsheet
+var sheet_dirty: bool = false
+
 ## Should return a SceneTree object. No args.
 var get_main_editor_tree: Callable
 

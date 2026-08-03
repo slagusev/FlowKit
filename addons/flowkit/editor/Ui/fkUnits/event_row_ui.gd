@@ -130,6 +130,14 @@ func show_context_menu(global_pos: Vector2) -> void:
 	context_menu.add_item("Replace Event", MenuChoices.REPLACE_EVENT)
 	context_menu.add_item("Edit Event", MenuChoices.EDIT_EVENT)
 	context_menu.add_separator()
+	var e := _get_event()
+	context_menu.add_check_item("Enabled", MenuChoices.TOGGLE_ENABLED)
+	context_menu.set_item_checked(context_menu.get_item_index(MenuChoices.TOGGLE_ENABLED), e.enabled if e else true)
+	context_menu.add_check_item("Trigger Once", MenuChoices.TOGGLE_ONCE)
+	context_menu.set_item_checked(context_menu.get_item_index(MenuChoices.TOGGLE_ONCE), e.trigger_once if e else false)
+	context_menu.add_check_item("Once While True", MenuChoices.TOGGLE_ONCE_WHILE)
+	context_menu.set_item_checked(context_menu.get_item_index(MenuChoices.TOGGLE_ONCE_WHILE), e.once_while_true if e else false)
+	context_menu.add_separator()
 	context_menu.add_item("Delete Event", MenuChoices.DELETE_EVENT)
 
 	context_menu.position = global_pos
@@ -141,7 +149,10 @@ enum MenuChoices {
 	REPLACE_EVENT = 1,
 	EDIT_EVENT = 2,
 	DELETE_EVENT = 3,
-	ADD_COMMENT_BELOW = 4
+	ADD_COMMENT_BELOW = 4,
+	TOGGLE_ENABLED = 5,
+	TOGGLE_ONCE = 6,
+	TOGGLE_ONCE_WHILE = 7,
 }
 
 func _on_context_menu_id_pressed(choice: int) -> void:
@@ -156,6 +167,21 @@ func _on_context_menu_id_pressed(choice: int) -> void:
 			delete_event_requested.emit(self)
 		MenuChoices.ADD_COMMENT_BELOW:
 			insert_comment_below_requested.emit(self)
+		MenuChoices.TOGGLE_ENABLED:
+			_toggle_event_flag("enabled")
+		MenuChoices.TOGGLE_ONCE:
+			_toggle_event_flag("trigger_once")
+		MenuChoices.TOGGLE_ONCE_WHILE:
+			_toggle_event_flag("once_while_true")
+
+func _toggle_event_flag(flag_name: String) -> void:
+	var e := _get_event()
+	if e == null:
+		return
+	before_contents_changed.emit(self)
+	e.set(flag_name, not bool(e.get(flag_name)))
+	_update_event_header()
+	contents_changed.emit(self)
 
 # ---------------------------------------------------------
 # Add Condition / Action Labels
@@ -323,8 +349,17 @@ func _update_event_header() -> void:
 	var display_name = _get_event_header_display_name(e)
 	var params_text = _get_params_text(e)
 	var node_name = String(e.target_node).get_file()
+	var flags := ""
+	if not e.enabled:
+		flags += " [OFF]"
+	if e.trigger_once:
+		flags += " [once]"
+	if e.once_while_true:
+		flags += " [edge]"
 
-	event_header_label.text = _header_label_format % [display_name, node_name, params_text]
+	event_header_label.text = (_header_label_format % [display_name, node_name, params_text]) + flags
+	if event_header_label:
+		event_header_label.modulate = Color(0.55, 0.55, 0.55) if not e.enabled else Color.WHITE
 
 func _get_event() -> FKEventUnit:
 	return get_block() as FKEventUnit

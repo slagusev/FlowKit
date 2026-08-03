@@ -13,9 +13,22 @@ var event_providers: Array = []
 var behavior_providers: Array = []
 var branch_providers: Array = []
 
+## O(1) lookup maps rebuilt after load
+var _action_by_id: Dictionary = {}
+var _condition_by_id: Dictionary = {}
+var _event_by_id: Dictionary = {}
+var _behavior_by_id: Dictionary = {}
+var _branch_by_id: Dictionary = {}
+
 func load_all() -> void:
+	action_providers.clear()
+	condition_providers.clear()
+	event_providers.clear()
+	behavior_providers.clear()
+	branch_providers.clear()
 	# Try to load from manifest first (required for exported builds)
 	if _load_from_manifest():
+		_rebuild_indexes()
 		print("[FKRegistry] Loaded providers from manifest: %d actions, %d conditions, %d events, %d behaviors, %d branches" % [
 			action_providers.size(),
 			condition_providers.size(),
@@ -33,6 +46,7 @@ func load_all() -> void:
 		_load_folder("events", event_providers)
 		_load_folder("behaviors", behavior_providers)
 		_load_folder("branches", branch_providers)
+		_rebuild_indexes()
 		
 		print("[FKRegistry]: Loaded providers from directories: %d actions, %d conditions, %d events, %d behaviors, %d branches" % [
 			action_providers.size(),
@@ -47,6 +61,28 @@ func load_all() -> void:
 func load_providers() -> void:
 	# Alias for load_all() for backward compatibility
 	load_all()
+
+func _rebuild_indexes() -> void:
+	_action_by_id.clear()
+	_condition_by_id.clear()
+	_event_by_id.clear()
+	_behavior_by_id.clear()
+	_branch_by_id.clear()
+	for p in action_providers:
+		if p and p.has_method("get_id"):
+			_action_by_id[p.get_id()] = p
+	for p in condition_providers:
+		if p and p.has_method("get_id"):
+			_condition_by_id[p.get_id()] = p
+	for p in event_providers:
+		if p and p.has_method("get_id"):
+			_event_by_id[p.get_id()] = p
+	for p in behavior_providers:
+		if p and p.has_method("get_id"):
+			_behavior_by_id[p.get_id()] = p
+	for p in branch_providers:
+		if p and p.has_method("get_id"):
+			_branch_by_id[p.get_id()] = p
 
 ## Load providers from the pre-generated manifest resource.
 ## Returns true if successful, false if manifest not found or invalid.
@@ -133,27 +169,22 @@ func _scan_directory_recursive(path: String, array: Array) -> void:
 	dir.list_dir_end()
 
 func poll_event(event_id: String, node: Node, inputs: Dictionary = {}, block_id: String = "", scene_root: Node = null) -> bool:
-	for provider in event_providers:
-		if provider.has_method("get_id") and provider.get_id() == event_id:
-			if provider.has_method("poll"):
-				# Evaluate expressions in inputs before polling
-				var evaluated_inputs: Dictionary = FKExpressionEvaluator.evaluate_inputs(inputs, node, scene_root)
-				return provider.poll(node, evaluated_inputs, block_id)
+	var provider = _event_by_id.get(event_id, null)
+	if provider and provider.has_method("poll"):
+		var evaluated_inputs: Dictionary = FKExpressionEvaluator.evaluate_inputs(inputs, node, scene_root)
+		return provider.poll(node, evaluated_inputs, block_id)
 	return false
 
 ## Returns the event provider instance for the given event_id, or null.
 func get_event_provider(event_id: String) -> Variant:
-	for provider in event_providers:
-		if provider.has_method("get_id") and provider.get_id() == event_id:
-			return provider
-	return null
+	return _event_by_id.get(event_id, null)
 
 ## Create a new, independent instance of the event provider for the given event_id.
 ## Each event block should get its own instance to avoid shared state bugs.
 func create_event_instance(event_id: String) -> Variant:
-	for provider in event_providers:
-		if provider.has_method("get_id") and provider.get_id() == event_id:
-			return provider.get_script().new()
+	var provider = _event_by_id.get(event_id, null)
+	if provider:
+		return provider.get_script().new()
 	return null
 
 ## Call setup() on an event provider so it can connect to signals on the target node.
@@ -177,55 +208,46 @@ func is_signal_event(event_id: String) -> bool:
 	return false
 
 func check_condition(condition_id: String, node: Node, inputs: Dictionary, negated: bool = false, scene_root: Node = null, block_id: String = "") -> bool:
-	for provider in condition_providers:
-		if provider.has_method("get_id") and provider.get_id() == condition_id:
-			if provider.has_method("check"):
-				# Evaluate expressions in inputs before checking
-				# Use node as context for variable resolution (not scene_root)
-				# Pass node as target_node so n_ variable lookups resolve on the correct node
-				var context = node
-				var evaluated_inputs: Dictionary = FKExpressionEvaluator.evaluate_inputs(inputs, context, scene_root, node)
-				var result = provider.check(node, evaluated_inputs, block_id)
-				return not result if negated else result
+	var provider = _condition_by_id.get(condition_id, null)
+	if provider and provider.has_method("check"):
+		var context = node
+		var evaluated_inputs: Dictionary = FKExpressionEvaluator.evaluate_inputs(inputs, context, scene_root, node)
+		var result = provider.check(node, evaluated_inputs, block_id)
+		return not result if negated else result
 	return false
 
 func execute_action(action_id: String, node: Node, inputs: Dictionary, scene_root: Node = null, block_id: String = "") -> Variant:
-	for provider in action_providers:
-		if provider.has_method("get_id") and provider.get_id() == action_id:
-			if provider.has_method("execute"):
-				# Use scene_root as the base instance so get_node() resolves from the scene root
-				# Pass original node as target_node so n_ variable lookups resolve on the correct node
-				var context = scene_root if scene_root else node
-				var evaluated_inputs: Dictionary = FKExpressionEvaluator.evaluate_inputs(inputs, context, scene_root, node)
-				
-				# Per-invocation wait token so concurrent multi-frame actions never share state.
-				var is_multi_frame_action: bool = provider.has_method("requires_multi_frames") and provider.requires_multi_frames()
-				var wait_token := {"done": false}
-				var on_completed := func():
-					wait_token["done"] = true
-				
-				if is_multi_frame_action:
-					provider.exec_completed.connect(on_completed)
-					# Listen before execute so single-frame multi-frame actions don't hang.
-				
-				provider.execute(node, evaluated_inputs, block_id)
-				
-				if is_multi_frame_action:
-					while not wait_token["done"]:
-						if not is_instance_valid(node) or not node.get_tree():
-							break
-						await node.get_tree().process_frame
-					if provider.exec_completed.is_connected(on_completed):
-						provider.exec_completed.disconnect(on_completed)
-				
-				return provider
+	var provider = _action_by_id.get(action_id, null)
+	if provider and provider.has_method("execute"):
+		# Use scene_root as the base instance so get_node() resolves from the scene root
+		# Pass original node as target_node so n_ variable lookups resolve on the correct node
+		var context = scene_root if scene_root else node
+		var evaluated_inputs: Dictionary = FKExpressionEvaluator.evaluate_inputs(inputs, context, scene_root, node)
+		
+		# Per-invocation wait token so concurrent multi-frame actions never share state.
+		var is_multi_frame_action: bool = provider.has_method("requires_multi_frames") and provider.requires_multi_frames()
+		var wait_token := {"done": false}
+		var on_completed := func():
+			wait_token["done"] = true
+		
+		if is_multi_frame_action:
+			provider.exec_completed.connect(on_completed)
+		
+		provider.execute(node, evaluated_inputs, block_id)
+		
+		if is_multi_frame_action:
+			while not wait_token["done"]:
+				if not is_instance_valid(node) or not node.get_tree():
+					break
+				await node.get_tree().process_frame
+			if provider.exec_completed.is_connected(on_completed):
+				provider.exec_completed.disconnect(on_completed)
+		
+		return provider
 	return null
 
 func get_behavior(behavior_id: String) -> Variant:
-	for provider in behavior_providers:
-		if provider.has_method("get_id") and provider.get_id() == behavior_id:
-			return provider
-	return null
+	return _behavior_by_id.get(behavior_id, null)
 
 func apply_behavior(behavior_id: String, node: Node, inputs: Dictionary = {}, scene_root: Node = null) -> void:
 	var behavior: Variant = get_behavior(behavior_id)
@@ -243,10 +265,7 @@ func remove_behavior(behavior_id: String, node: Node) -> void:
 # --- Branch providers -------------------------------------------------------
 
 func get_branch_provider(branch_id: String) -> Variant:
-	for provider in branch_providers:
-		if provider.has_method("get_id") and provider.get_id() == branch_id:
-			return provider
-	return null
+	return _branch_by_id.get(branch_id, null)
 
 ## Resolve the branch provider ID for a branch action.
 ## Provides backward compatibility: legacy sheets stored "if"/"elseif"/"else"

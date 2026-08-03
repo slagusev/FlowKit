@@ -19,9 +19,24 @@ var variables: Dictionary = {}
 # Node variable storage (per-node variables using metadata)
 var node_variables: Dictionary = {}
 
+# Sheet-local variables: sheet_uid (int as String key) -> { var_name: value }
+var sheet_variables: Dictionary = {}
+
+# Active sheet context (set by FlowKitEngine while evaluating a sheet).
+var current_sheet_uid: int = 0
+var current_sheet_vars: Dictionary = {}
+## For Each: the node currently being iterated.
+var current: Node = null
+var current_node: Node = null  # alias
+
 # Named callables registered by Define Function / usable via Call Function.
 # Key: function name (String) → Callable
 var functions: Dictionary = {}
+
+## Debug log (ring buffer) for the overlay / console.
+const DEBUG_LOG_MAX := 80
+var debug_enabled: bool = true
+var debug_log: Array = []  # Array of {t, kind, msg}
 
 var global_signals: FKGlobalSignals = FKGlobalSignals.new()
 
@@ -81,6 +96,70 @@ func call_function(function_name: String, args: Array = []) -> Variant:
 
 func clear_all_functions() -> void:
 	functions.clear()
+
+# --- Sheet-local variables -------------------------------------------------
+func init_sheet_vars(sheet_uid: int, defaults: Dictionary) -> void:
+	var key := str(sheet_uid)
+	var bucket: Dictionary = {}
+	for k in defaults.keys():
+		bucket[k] = defaults[k]
+	sheet_variables[key] = bucket
+	if current_sheet_uid == sheet_uid:
+		current_sheet_vars = bucket
+
+func set_active_sheet(sheet_uid: int) -> void:
+	current_sheet_uid = sheet_uid
+	var key := str(sheet_uid)
+	if sheet_variables.has(key):
+		current_sheet_vars = sheet_variables[key]
+	else:
+		current_sheet_vars = {}
+
+func set_sheet_var(var_name: String, value: Variant, sheet_uid: int = -1) -> void:
+	var uid := sheet_uid if sheet_uid >= 0 else current_sheet_uid
+	var key := str(uid)
+	if not sheet_variables.has(key):
+		sheet_variables[key] = {}
+	sheet_variables[key][var_name] = value
+	if uid == current_sheet_uid:
+		current_sheet_vars = sheet_variables[key]
+
+func get_sheet_var(var_name: String, default: Variant = null, sheet_uid: int = -1) -> Variant:
+	var uid := sheet_uid if sheet_uid >= 0 else current_sheet_uid
+	var key := str(uid)
+	if sheet_variables.has(key) and sheet_variables[key].has(var_name):
+		return sheet_variables[key][var_name]
+	return default
+
+func has_sheet_var(var_name: String, sheet_uid: int = -1) -> bool:
+	var uid := sheet_uid if sheet_uid >= 0 else current_sheet_uid
+	var key := str(uid)
+	return sheet_variables.has(key) and sheet_variables[key].has(var_name)
+
+func clear_sheet_vars(sheet_uid: int = -1) -> void:
+	var uid := sheet_uid if sheet_uid >= 0 else current_sheet_uid
+	sheet_variables.erase(str(uid))
+	if uid == current_sheet_uid:
+		current_sheet_vars = {}
+
+func set_current_node(node: Node) -> void:
+	current = node
+	current_node = node
+
+# --- Debug -----------------------------------------------------------------
+func debug_push(kind: String, msg: String) -> void:
+	if not debug_enabled:
+		return
+	debug_log.append({
+		"t": Time.get_ticks_msec(),
+		"kind": kind,
+		"msg": msg
+	})
+	while debug_log.size() > DEBUG_LOG_MAX:
+		debug_log.pop_front()
+
+func debug_clear() -> void:
+	debug_log.clear()
 
 # Node variable management
 func set_node_var(node: Node, var_name: String, value: Variant) -> void:

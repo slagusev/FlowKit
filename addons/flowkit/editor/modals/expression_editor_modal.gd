@@ -32,13 +32,47 @@ func _toggle_subs(on: bool):
 	if on and not _is_subbed:
 		node_tree.item_selected.connect(_on_node_selected)
 		item_list.item_activated.connect(_on_item_activated)
+		if expression_input and not expression_input.text_changed.is_connected(_on_expression_text_changed):
+			expression_input.text_changed.connect(_on_expression_text_changed)
 	elif _is_subbed and not on:
 		node_tree.item_selected.disconnect(_on_node_selected)
 		item_list.item_activated.disconnect(_on_item_activated)
+		if expression_input and expression_input.text_changed.is_connected(_on_expression_text_changed):
+			expression_input.text_changed.disconnect(_on_expression_text_changed)
 	else:
 		return
 	
 	_is_subbed = on
+
+var _validate_label: Label
+
+func _on_expression_text_changed(new_text: String) -> void:
+	_live_validate(new_text)
+
+func _live_validate(text: String) -> void:
+	if _validate_label == null and expression_input:
+		_validate_label = Label.new()
+		_validate_label.add_theme_font_size_override("font_size", 11)
+		var parent = expression_input.get_parent()
+		if parent:
+			parent.add_child(_validate_label)
+	if _validate_label == null:
+		return
+	var t := text.strip_edges()
+	if t.is_empty():
+		_validate_label.text = ""
+		return
+	# Lightweight syntax-ish checks (full eval needs runtime context)
+	if t.count("(") != t.count(")"):
+		_validate_label.text = "⚠ Unbalanced parentheses"
+		_validate_label.add_theme_color_override("font_color", Color(1, 0.5, 0.4))
+		return
+	if t.count("\"") % 2 != 0 and t.count("'") % 2 != 0:
+		_validate_label.text = "⚠ Unbalanced quotes"
+		_validate_label.add_theme_color_override("font_color", Color(1, 0.5, 0.4))
+		return
+	_validate_label.text = "✓ Looks ok (runtime may still fail)"
+	_validate_label.add_theme_color_override("font_color", Color(0.5, 0.9, 0.6))
 
 func populate_inputs(node_path: String, action_id: String, inputs: Array, \
 current_values: Dictionary = {}) -> void:
@@ -152,8 +186,7 @@ func _populate_item_list_for_selected_node() -> void:
 	
 	# Special handling for System node (null metadata)
 	if selected_tree_node == null:
-		# System node - show scene variables
-		item_list.add_item("system.get_var(\"variable_name\")")
+		_add_system_snippets()
 		return
 	
 	var target_node: Node = _scene_root.get_node_or_null(selected_node_path) if _scene_root \
@@ -162,6 +195,31 @@ func _populate_item_list_for_selected_node() -> void:
 	_add_var_items(target_node)
 	_add_prop_items(target_node)
 	_add_math_op_section()
+	_add_type_helpers()
+
+func _add_system_snippets() -> void:
+	item_list.add_item("system.get_var(\"variable_name\")")
+	item_list.add_item("system.get_sheet_var(\"score\")")
+	item_list.add_item("s_score")
+	item_list.add_item("delta")
+	item_list.add_item("current")
+	item_list.add_item("current.global_position")
+	item_list.add_item("true")
+	item_list.add_item("false")
+	item_list.add_item("null")
+	item_list.add_item("Vector2(0, 0)")
+	item_list.add_item("Vector3(0, 0, 0)")
+	item_list.add_item("Color(1, 1, 1, 1)")
+	_add_type_helpers()
+
+func _add_type_helpers() -> void:
+	item_list.add_item("--- helpers ---")
+	item_list.add_item("true")
+	item_list.add_item("false")
+	item_list.add_item("Vector2(0, 0)")
+	item_list.add_item("Vector2(1, 0)")
+	item_list.add_item("Color(1, 1, 1, 1)")
+	item_list.add_item("\"text\"")
 
 var _scene_root: Node:
 	get:

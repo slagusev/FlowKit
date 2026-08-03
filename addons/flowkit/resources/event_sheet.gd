@@ -12,6 +12,13 @@ class_name FKEventSheet
 @export var comments: Array[FKComment] = []
 @export var groups: Array[FKGroup] = []
 
+## Sheet-local variable definitions.
+## Each entry: {"name": String, "type": "int"|"float"|"bool"|"string"|"Variant", "default": Variant}
+@export var sheet_var_defs: Array[Dictionary] = []
+
+## Named reusable action lists (subsheets / local functions).
+@export var subsheets: Array = []
+
 ## Stores the display order: [{"type": "event"|"comment"|"group", "index": int}, ...]
 @export var item_order: Array[Dictionary] = []
 @export_storage var _id_assigner: FKIdAssigner
@@ -50,6 +57,42 @@ func get_all_events() -> Array:
 	events.append_array(self.events)
 	_collect_events_from_groups(self.groups, events)
 	return events
+
+## Build runtime variable map from definitions (name -> default value).
+func build_sheet_var_defaults() -> Dictionary:
+	var result: Dictionary = {}
+	for def in sheet_var_defs:
+		if def == null or not (def is Dictionary):
+			continue
+		var vname: String = str(def.get("name", "")).strip_edges()
+		if vname.is_empty():
+			continue
+		result[vname] = _coerce_default(def.get("default", null), str(def.get("type", "Variant")))
+	return result
+
+func find_subsheet(sub_name: String):
+	var key := sub_name.strip_edges()
+	for s in subsheets:
+		if s != null and "subsheet_name" in s and s.subsheet_name == key:
+			return s
+	return null
+
+static func _coerce_default(value: Variant, type_name: String) -> Variant:
+	match type_name:
+		"int":
+			return int(value) if value != null else 0
+		"float":
+			return float(value) if value != null else 0.0
+		"bool":
+			if value is bool:
+				return value
+			if value is String:
+				return value.to_lower() in ["true", "1", "yes"]
+			return bool(value) if value != null else false
+		"string", "String":
+			return str(value) if value != null else ""
+		_:
+			return value
 
 func _collect_events_from_groups(groups: Array, out_events: Array) -> void:
 	for group in groups:

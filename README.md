@@ -12,7 +12,21 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - This fork: https://github.com/slagusev/FlowKit  
 - Site assets (fork): `website/` in this repo  
 
-## What's different in this fork (2.3)
+## What's different in this fork (2.4)
+
+### High-priority features
+- **Sheet variables** — define on the right panel; use `s_name` or bare name in expressions; **Set Sheet Variable** / **Compare Sheet Variable**
+- **Subsheets** — create named lists; **Call Subsheet** runs them
+- **For Each** — group and/or class + subsheet; `current` in expressions
+- **Debug overlay** (F4) — last events, condition fails, expression errors, live vars (debug builds)
+- **Event flags** — Enabled / Trigger Once / Once While True (context menu)
+- **Expression editor** — live paren/quote check, helpers, sheet-var snippets
+- **Performance** — provider id index O(1)
+- **UX** — dirty indicator, Ctrl+F filter, jump-to match, meta panel save-safe
+
+---
+
+## Earlier (2.3)
 
 ### Massive provider expansion (2D / 3D / UI)
 - **2D:** Camera2D, Sprite2D, RigidBody2D, Light2D, particles, collision layers, PathFollow2D, RayCast2D, area/area signals, animation finished, tweens (scale/modulate), velocity vector

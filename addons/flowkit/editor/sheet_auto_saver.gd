@@ -74,6 +74,12 @@ func _save_sheet() -> FKEventSheet:
 
 	var units := _block_container.units
 	var sheet := FKEventSheet.from_units(units)
+	if _globals:
+		sheet.sheet_var_defs = _globals.sheet_var_defs.duplicate(true)
+		sheet.subsheets = []
+		for s in _globals.sheet_subsheets:
+			if s != null:
+				sheet.subsheets.append(s)
 	
 	var result: FKEventSheet = null
 	var sheet_io := _globals.sheet_io
@@ -84,6 +90,7 @@ func _save_sheet() -> FKEventSheet:
 
 	if err == OK:
 		print("[FKSheetAutoSaver] ✓ Event sheet saved")
+		_globals.sheet_dirty = false
 		result = sheet
 	else:
 		push_error("[FKSheetAutoSaver] Failed to save event sheet: ", err)
