@@ -15,12 +15,12 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.10.4 — Bottom panel
+## What's new in v3.10.5 — Layout hosts
 
-| Change | Detail |
-|--------|--------|
-| **Host** | Event sheet is a **bottom panel** tab (Output / Debugger style), not a main-screen top tab |
-| **Open** | Bottom bar **FlowKit** · or Tools → FlowKit → Show FlowKit Panel |
+| Piece | Where |
+|-------|--------|
+| **FlowKit** (event sheet) | Top tab next to **2D / 3D / Script / Game** |
+| **Sheet Variables / Subsheets** | Right dock (with Inspector / Groups), scrolls on its own |
 
 ## Earlier — v3.10.1 Import fix
 

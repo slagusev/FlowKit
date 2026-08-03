@@ -9,8 +9,10 @@ var debugger_plugin: FKEditorDebuggerPlugin
 var editor: FKMainEditor = null
 var editor_globals: FKEditorGlobals = FKEditorGlobals.new()
 var editor_interface: EditorInterface
-## Bottom-panel tab button returned by add_control_to_bottom_panel.
-var _bottom_panel_button: Button = null
+
+## Right dock: Sheet Variables / Subsheets (Inspector-style).
+var _meta_dock_host: Control = null
+var _sheet_meta_panel: FKSheetMetaPanel = null
 
 func _enable_plugin() -> void:
 	pass
@@ -24,11 +26,12 @@ func _enter_tree() -> void:
 	_prep_settings_window()
 	_prep_tool_submenu_entries()
 	_add_runtime_autoloads()
-	_register_bottom_panel()
+	_register_main_screen()
+	_register_sheet_meta_dock()
 	_create_and_add_custom_inspector()
 	_prep_export_plugin()
 	_prep_debugger_plugin()
-	print("[FlowKit]: Plugin loaded (bottom panel)")
+	print("[FlowKit]: Plugin loaded (main screen + Sheet dock)")
 
 func _prep_debugger_plugin() -> void:
 	debugger_plugin = FKEditorDebuggerPlugin.new()
@@ -50,15 +53,8 @@ func _prep_main_editor():
 	var editor_scene: PackedScene = preload(path)
 	editor = editor_scene.instantiate()
 	editor.editor_globals = editor_globals
-	# Assign globals before legitimization (submodules need FKEditorGlobals).
+	# Globals must be set before legitimization.
 	editor.legitimize()
-	# Bottom panel hosts size children via container flags — not main-screen anchors.
-	editor.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	editor.anchor_right = 0.0
-	editor.anchor_bottom = 0.0
-	editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	editor.custom_minimum_size = Vector2(400, 320)
 
 func _prep_settings_window():
 	const scene_path := FKEditorGlobals.SETTINGS_WINDOW_SCENE_PATH
@@ -74,7 +70,6 @@ var settings_window: FKSettingsWindow
 func _prep_tool_submenu_entries():
 	_base_popup = PopupMenu.new()
 	_base_popup.add_item("Settings", MENU_ITEM_SETTINGS)
-	_base_popup.add_item("Show FlowKit Panel", MENU_ITEM_SHOW_PANEL)
 	_base_popup.id_pressed.connect(_on_base_popup_id_pressed)
 	add_tool_submenu_item("FlowKit", _base_popup)
 
@@ -83,11 +78,8 @@ var _base_popup: PopupMenu
 func _on_base_popup_id_pressed(id: int):
 	if id == MENU_ITEM_SETTINGS:
 		settings_window.popup_centered()
-	elif id == MENU_ITEM_SHOW_PANEL:
-		_show_flowkit_panel()
 
 const MENU_ITEM_SETTINGS := 0
-const MENU_ITEM_SHOW_PANEL := 1
 
 func _add_runtime_autoloads():
 	add_autoload_singleton(
@@ -99,21 +91,50 @@ func _add_runtime_autoloads():
 		"res://addons/flowkit/runtime/flowkit_engine.gd"
 	)
 
-## Event sheet lives in the bottom panel (Debugger / Output style).
-## Main-screen host does not size plugin children reliably for scrollable UIs.
-func _register_bottom_panel() -> void:
-	if editor == null:
-		return
-	_bottom_panel_button = add_control_to_bottom_panel(editor, "FlowKit")
+## Event sheet workspace — top main-screen tab next to 2D / 3D / Script / Game.
+func _register_main_screen() -> void:
+	var main_screen = editor_interface.get_editor_main_screen()
+	main_screen.add_child(editor)
+	editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	if editor.has_method("_configure_scroll_layout"):
 		editor._configure_scroll_layout()
-	if editor.has_method("_on_host_panel_ready"):
-		editor.call_deferred("_on_host_panel_ready")
+	# Hide until user opens the FlowKit main tab.
+	_make_visible(false)
 
-func _show_flowkit_panel() -> void:
-	if editor == null:
-		return
-	make_bottom_panel_item_visible(editor)
+## Sheet Variables / Subsheets — right dock (Inspector / Node / Groups style).
+func _register_sheet_meta_dock() -> void:
+	_meta_dock_host = MarginContainer.new()
+	_meta_dock_host.name = "FlowKitSheet"
+	_meta_dock_host.custom_minimum_size = Vector2(260, 0)
+	_meta_dock_host.add_theme_constant_override("margin_left", 4)
+	_meta_dock_host.add_theme_constant_override("margin_right", 4)
+	_meta_dock_host.add_theme_constant_override("margin_top", 4)
+	_meta_dock_host.add_theme_constant_override("margin_bottom", 4)
+
+	var scroll := ScrollContainer.new()
+	scroll.name = "MetaScroll"
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.clip_contents = true
+	_meta_dock_host.add_child(scroll)
+
+	_sheet_meta_panel = FKSheetMetaPanel.new()
+	_sheet_meta_panel.name = "SheetMetaPanel"
+	# Dock scroll: width fills, height grows with content (enables vertical scroll).
+	_sheet_meta_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sheet_meta_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_sheet_meta_panel.custom_minimum_size = Vector2(240, 0)
+	_sheet_meta_panel.setup(editor_globals)
+	scroll.add_child(_sheet_meta_panel)
+
+	add_control_to_dock(DOCK_SLOT_RIGHT_UL, _meta_dock_host)
+	# Wire to main editor (save dirty, subsheet workflows).
+	if editor and editor.has_method("bind_sheet_meta_panel"):
+		editor.bind_sheet_meta_panel(_sheet_meta_panel)
 
 func _create_and_add_custom_inspector():
 	inspector_plugin = FKEditorInspectorPlugin.new()
@@ -134,11 +155,15 @@ func _exit_tree() -> void:
 	remove_autoload_singleton("FlowKitSystem")
 	remove_autoload_singleton("FlowKit")
 
-	if editor:
-		remove_control_from_bottom_panel(editor)
+	if _meta_dock_host and is_instance_valid(_meta_dock_host):
+		remove_control_from_docks(_meta_dock_host)
+		_meta_dock_host.queue_free()
+		_meta_dock_host = null
+		_sheet_meta_panel = null
+
+	if editor and is_instance_valid(editor):
 		editor.queue_free()
 		editor = null
-	_bottom_panel_button = null
 
 	if inspector_plugin:
 		remove_inspector_plugin(inspector_plugin)
@@ -156,9 +181,33 @@ func _exit_tree() -> void:
 		settings_window.queue_free()
 		settings_window = null
 
-## No main-screen tab — sheet editor is a bottom panel item.
 func _has_main_screen() -> bool:
-	return false
+	return true
+
+func _make_visible(visible: bool) -> void:
+	if editor == null:
+		return
+	editor.visible = visible
+	if visible:
+		# Main-screen host: force full-rect after tab select.
+		_fit_main_editor()
+		if editor.is_inside_tree():
+			editor.call_deferred("_on_main_screen_shown")
+
+func _fit_main_editor() -> void:
+	if editor == null or not is_instance_valid(editor):
+		return
+	var parent_ctrl := editor.get_parent() as Control
+	editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	editor.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	editor.position = Vector2.ZERO
+	if parent_ctrl and parent_ctrl.size.x > 1.0 and parent_ctrl.size.y > 1.0:
+		editor.size = parent_ctrl.size
+	if editor.has_method("_fit_to_parent"):
+		editor._fit_to_parent()
+	if editor.has_method("_configure_scroll_layout"):
+		editor._configure_scroll_layout()
 
 func _get_plugin_name() -> String:
 	return "FlowKit"

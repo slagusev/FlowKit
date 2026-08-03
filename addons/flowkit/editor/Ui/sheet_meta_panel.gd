@@ -30,7 +30,10 @@ func setup(editor_globals: FKEditorGlobals) -> void:
 	refresh()
 
 func _build() -> void:
-	custom_minimum_size = Vector2(280, 0)
+	# Dock host scrolls us: fill width, grow height with content (no vertical EXPAND_FILL).
+	custom_minimum_size = Vector2(240, 0)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.14, 0.15, 0.18, 1)
 	style.content_margin_left = 8
@@ -41,7 +44,8 @@ func _build() -> void:
 	
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 6)
-	root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	add_child(root)
 	
 	var title := Label.new()
@@ -50,8 +54,9 @@ func _build() -> void:
 	root.add_child(title)
 	
 	_vars_list = ItemList.new()
-	_vars_list.custom_minimum_size = Vector2(0, 80)
-	_vars_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_vars_list.custom_minimum_size = Vector2(0, 100)
+	_vars_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_vars_list.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_vars_list.item_selected.connect(_on_var_selected)
 	root.add_child(_vars_list)
 	
@@ -116,7 +121,8 @@ func _build() -> void:
 	
 	_sub_actions_list = ItemList.new()
 	_sub_actions_list.custom_minimum_size = Vector2(0, 90)
-	_sub_actions_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_sub_actions_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sub_actions_list.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_sub_actions_list.item_activated.connect(_on_sub_action_activated)
 	root.add_child(_sub_actions_list)
 	

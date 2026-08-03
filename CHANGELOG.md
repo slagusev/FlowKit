@@ -2,18 +2,19 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
-## 3.10.4 — Bottom panel host (not main-screen tab)
+## 3.10.5 — Correct hosts: main screen + Sheet dock
 
-### Changed
-- **FlowKit sheet editor is a bottom panel tab** again (same place as Output / Debugger), not a top main-screen workspace tab.
-- Open via the **FlowKit** button on the bottom bar, or **Project → Tools → FlowKit → Show FlowKit Panel**.
+### Architecture (as intended)
+- **FlowKit** = top main-screen tab next to **2D / 3D / Script / Game** (event sheet workspace only).
+- **Sheet Variables / Subsheets** = **right dock** tab (Inspector / Node / Groups style), scrollable.
 
-### Why
-- Godot main-screen hosts do not size scrollable plugin UIs reliably (crooked layout, no scroll).
-- Bottom panel provides a real height, resize handle, and container layout that works with `ScrollContainer`.
+### Fixed
+- Removed embedded meta panel from inside the event sheet (was breaking main layout + scroll).
+- Dock wraps meta panel in `ScrollContainer` so variables/subsheets scroll independently.
 
-### Still fixed (from 3.10.3)
-- Scroll content must not use vertical `SIZE_EXPAND_FILL` (that kills scrolling).
+## 3.10.4 — (superseded) Bottom panel experiment
+
+Briefly hosted the whole editor in the bottom bar; wrong product shape. Replaced by 3.10.5.
 
 ## 3.10.3 — Scroll + main screen layout (real fix)
 

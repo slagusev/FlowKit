@@ -94,49 +94,46 @@ func _enter_tree() -> void:
 	_ensure_sheet_filter_ui()
 	_ensure_mute_toolbar()
 	_ensure_templates_menu()
-	_ensure_sheet_meta_panel()
+	# Sheet Variables / Subsheets live in the right dock (bound by plugin).
 	_ensure_dirty_label()
 	_toggle_subs(true)
 	set_process(true)
 	if menu_bar and not menu_bar.template_requested.is_connected(_on_template_requested):
 		menu_bar.template_requested.connect(_on_template_requested)
 	_configure_scroll_layout()
-	# Host (bottom panel) attaches after legitimize — finalize in _on_host_panel_ready.
 
-## Called after plugin adds this control to the editor bottom panel.
-func _on_host_panel_ready() -> void:
-	_prepare_for_bottom_panel_host()
+## Plugin injects the docked Sheet Variables / Subsheets panel.
+func bind_sheet_meta_panel(panel: FKSheetMetaPanel) -> void:
+	if panel == null:
+		return
+	_sheet_meta_panel = panel
+	if not panel.meta_changed.is_connected(_on_sheet_meta_changed):
+		panel.meta_changed.connect(_on_sheet_meta_changed)
+	if not panel.add_subsheet_action_requested.is_connected(_on_add_subsheet_action):
+		panel.add_subsheet_action_requested.connect(_on_add_subsheet_action)
+	if not panel.edit_subsheet_action_requested.is_connected(_on_edit_subsheet_action):
+		panel.edit_subsheet_action_requested.connect(_on_edit_subsheet_action)
+	if not panel.retarget_subsheet_action_requested.is_connected(_on_retarget_subsheet_action):
+		panel.retarget_subsheet_action_requested.connect(_on_retarget_subsheet_action)
+	if not panel.rechoose_subsheet_action_requested.is_connected(_on_rechoose_subsheet_action):
+		panel.rechoose_subsheet_action_requested.connect(_on_rechoose_subsheet_action)
+	panel.refresh()
+
+## Called when the FlowKit main-screen tab (next to 2D/3D/Script) is selected.
+func _on_main_screen_shown() -> void:
+	_fit_to_parent()
 	_configure_scroll_layout()
-	_sync_full_rect_children()
-	for _i in 2:
+	for _i in 3:
 		await get_tree().process_frame
-		if not is_inside_tree():
+		if not is_inside_tree() or not visible:
 			return
-		_prepare_for_bottom_panel_host()
+		_fit_to_parent()
 		_configure_scroll_layout()
-		_sync_full_rect_children()
 	if scroll_container and is_instance_valid(scroll_container):
 		scroll_container.queue_redraw()
 	if blocks_container and is_instance_valid(blocks_container):
 		blocks_container.queue_sort()
 	queue_redraw()
-
-## Bottom panel / dock hosts size us as a container child — expand flags, not main-screen anchors.
-func _prepare_for_bottom_panel_host() -> void:
-	# Clear main-screen style anchors that fight the bottom-panel container.
-	set_anchors_preset(Control.PRESET_TOP_LEFT)
-	offset_left = 0.0
-	offset_top = 0.0
-	offset_right = 0.0
-	offset_bottom = 0.0
-	anchor_right = 0.0
-	anchor_bottom = 0.0
-	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	if custom_minimum_size.y < 280.0:
-		custom_minimum_size = Vector2(maxf(custom_minimum_size.x, 400.0), 320.0)
-	if not resized.is_connected(_on_self_resized):
-		resized.connect(_on_self_resized)
 
 func _on_self_resized() -> void:
 	_sync_full_rect_children()
@@ -154,7 +151,6 @@ func _sync_full_rect_children() -> void:
 		child.size = size
 
 ## ScrollContainer only scrolls if its *content* does NOT expand vertically.
-## EXPAND_FILL on the child makes content height == viewport → no scrollbar.
 func _configure_scroll_layout() -> void:
 	if scroll_container and is_instance_valid(scroll_container):
 		scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -162,7 +158,6 @@ func _configure_scroll_layout() -> void:
 		scroll_container.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		scroll_container.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 		scroll_container.clip_contents = true
-		# Direct child (MarginContainer): grow with content, fill width only.
 		if scroll_container.get_child_count() > 0:
 			var content := scroll_container.get_child(0) as Control
 			if content:
@@ -176,19 +171,22 @@ func _configure_scroll_layout() -> void:
 		empty_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		if empty_label.custom_minimum_size.y < 80.0:
 			empty_label.custom_minimum_size.y = 120.0
-	var workspace := get_node_or_null("OuterVBox/SheetWorkspace") as Control
-	if workspace:
-		workspace.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		workspace.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
-## Compat alias (older plugin hooks).
+## Fill the main-screen host when FlowKit tab is active.
 func _fit_to_parent() -> void:
-	_prepare_for_bottom_panel_host()
+	if not is_inside_tree():
+		return
+	var parent_ctrl := get_parent() as Control
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	position = Vector2.ZERO
+	if parent_ctrl and parent_ctrl.size.x > 1.0 and parent_ctrl.size.y > 1.0:
+		size = parent_ctrl.size
+	if not resized.is_connected(_on_self_resized):
+		resized.connect(_on_self_resized)
 	_sync_full_rect_children()
 	_configure_scroll_layout()
-
-func _on_main_screen_shown() -> void:
-	await _on_host_panel_ready()
 
 var _templates_popup: PopupMenu
 
@@ -269,41 +267,9 @@ func _ensure_mute_toolbar() -> void:
 	_play_debug_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
 	top_bar.add_child(_play_debug_label)
 
+## Injected by plugin — lives in the right dock, not inside the event sheet.
 var _sheet_meta_panel: FKSheetMetaPanel
 var _dirty_label: Label
-
-func _ensure_sheet_meta_panel() -> void:
-	if _sheet_meta_panel and is_instance_valid(_sheet_meta_panel):
-		return
-	# Place panel to the right of the scroll area
-	var outer: Node = scroll_container.get_parent() if scroll_container else null
-	if outer == null:
-		return
-	# Rebuild as HBox: [Scroll | Meta]
-	if outer is VBoxContainer:
-		var scroll_idx := scroll_container.get_index()
-		var hbox := HBoxContainer.new()
-		hbox.name = "SheetWorkspace"
-		hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		outer.add_child(hbox)
-		outer.move_child(hbox, scroll_idx)
-		outer.remove_child(scroll_container)
-		hbox.add_child(scroll_container)
-		scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		_sheet_meta_panel = FKSheetMetaPanel.new()
-		_sheet_meta_panel.setup(editor_globals)
-		_sheet_meta_panel.size_flags_horizontal = Control.SIZE_SHRINK_END
-		_sheet_meta_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		_sheet_meta_panel.custom_minimum_size = Vector2(280, 0)
-		_sheet_meta_panel.meta_changed.connect(_on_sheet_meta_changed)
-		_sheet_meta_panel.add_subsheet_action_requested.connect(_on_add_subsheet_action)
-		_sheet_meta_panel.edit_subsheet_action_requested.connect(_on_edit_subsheet_action)
-		_sheet_meta_panel.retarget_subsheet_action_requested.connect(_on_retarget_subsheet_action)
-		_sheet_meta_panel.rechoose_subsheet_action_requested.connect(_on_rechoose_subsheet_action)
-		hbox.add_child(_sheet_meta_panel)
-		_configure_scroll_layout()
 
 var pending_subsheet_index: int = -1
 var pending_subsheet_action_index: int = -1
@@ -516,9 +482,7 @@ var _is_subbed := false
 func _on_visibility_changed():
 	editor_globals.sheet_editor_visible = self.visible
 	if visible:
-		_prepare_for_bottom_panel_host()
-		_configure_scroll_layout()
-		_sync_full_rect_children()
+		_fit_to_parent()
 		call_deferred("_fit_to_parent")
 
 func _toggle_modal_signal_subs(on: bool):
