@@ -2,6 +2,15 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.10.8 — Select Action empty + Tools menu for Generate
+
+### Fixed
+- **Select Action** empty list (same registry/reload hardening as events).
+- **Generate / Reload Providers** also under **Project → Tools → FlowKit** (not only FlowKit panel → Edit).
+
+### Note
+- Generate was always under the **FlowKit main tab → Edit** menu, not Godot Project Settings.
+
 ## 3.10.7 — Select Event list empty for Sprite2D
 
 ### Fixed

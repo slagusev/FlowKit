@@ -1475,13 +1475,25 @@ func _start_add_workflow(block_type: String, target_row: Node = null) -> void:
 		return
 	pending_block_type = block_type
 	pending_target_row = target_row
-	
+	_ensure_registry_loaded()
+
 	var scene_root := editor_interface.get_edited_scene_root()
 	if not scene_root:
+		push_warning("[FlowKit] Open a scene first, then Add Event / Action.")
 		return
-	
+
 	select_node_modal.populate_from_scene(scene_root, pending_block_type)
 	_popup_centered_on_editor(select_node_modal)
+
+func _ensure_registry_loaded() -> void:
+	if editor_globals == null or editor_globals.registry == null:
+		return
+	var reg = editor_globals.registry
+	if reg.action_providers.is_empty() or reg.event_providers.is_empty():
+		if reg.has_method("load_providers"):
+			reg.load_providers()
+			print("[FKMainEditor]: Reloaded empty registry — actions=", reg.action_providers.size(),
+				" events=", reg.event_providers.size())
 
 var select_node_modal: FKSelectNodeModal:
 	get:

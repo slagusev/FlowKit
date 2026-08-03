@@ -70,16 +70,49 @@ var settings_window: FKSettingsWindow
 func _prep_tool_submenu_entries():
 	_base_popup = PopupMenu.new()
 	_base_popup.add_item("Settings", MENU_ITEM_SETTINGS)
+	_base_popup.add_separator()
+	_base_popup.add_item("Reload Providers (fix empty lists)", MENU_ITEM_RELOAD_PROVIDERS)
+	_base_popup.add_item("Generate Providers (MAY BE UNSTABLE)", MENU_ITEM_GENERATE_PROVIDERS)
+	_base_popup.add_item("Generate Provider Manifest (export)", MENU_ITEM_GENERATE_MANIFEST)
+	_base_popup.add_separator()
+	_base_popup.add_item("Show FlowKit Main Tab", MENU_ITEM_SHOW_MAIN)
 	_base_popup.id_pressed.connect(_on_base_popup_id_pressed)
 	add_tool_submenu_item("FlowKit", _base_popup)
 
 var _base_popup: PopupMenu
 
 func _on_base_popup_id_pressed(id: int):
-	if id == MENU_ITEM_SETTINGS:
-		settings_window.popup_centered()
+	match id:
+		MENU_ITEM_SETTINGS:
+			if settings_window:
+				settings_window.popup_centered()
+		MENU_ITEM_RELOAD_PROVIDERS:
+			_reload_providers()
+		MENU_ITEM_GENERATE_PROVIDERS:
+			if editor and editor.has_method("_on_generate_providers"):
+				editor._on_generate_providers()
+		MENU_ITEM_GENERATE_MANIFEST:
+			if editor and editor.has_method("_on_generate_manifest"):
+				editor._on_generate_manifest()
+		MENU_ITEM_SHOW_MAIN:
+			# Focus main-screen plugin tab
+			get_editor_interface().set_main_screen_editor("FlowKit")
 
 const MENU_ITEM_SETTINGS := 0
+const MENU_ITEM_RELOAD_PROVIDERS := 1
+const MENU_ITEM_GENERATE_PROVIDERS := 2
+const MENU_ITEM_GENERATE_MANIFEST := 3
+const MENU_ITEM_SHOW_MAIN := 4
+
+func _reload_providers() -> void:
+	if action_registry and action_registry.has_method("load_providers"):
+		action_registry.load_providers()
+		print("[FlowKit]: Providers reloaded — actions=", action_registry.action_providers.size(),
+			" conditions=", action_registry.condition_providers.size(),
+			" events=", action_registry.event_providers.size())
+		# Also mirror onto globals (same instance usually).
+		if editor_globals:
+			editor_globals.registry = action_registry
 
 func _add_runtime_autoloads():
 	add_autoload_singleton(

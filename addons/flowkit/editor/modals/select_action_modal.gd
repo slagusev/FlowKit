@@ -77,7 +77,6 @@ func _toggle_subs(should_sub: bool):
 	_is_subbed = should_sub
 
 func _on_item_list_gui_input(event: InputEvent) -> void:
-	# Right-click or Ctrl+click toggles favorite on selected item
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_RIGHT or (event.button_index == MOUSE_BUTTON_LEFT and event.ctrl_pressed):
 			var idx := item_list.get_item_at_position(event.position, true)
@@ -92,57 +91,75 @@ func _on_item_list_gui_input(event: InputEvent) -> void:
 				_favorites.toggle_action(aid, aname)
 				_update_list(search_box.text if search_box else "")
 				get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT:
+			var idx2 := item_list.get_item_at_position(event.position, true)
+			if idx2 >= 0 and not item_list.is_item_disabled(idx2):
+				call_deferred("_confirm_action_index", idx2)
+				get_viewport().set_input_as_handled()
 
 func _on_search_submitted(_text: String) -> void:
-	# Enter in search selects the first (or currently selected) match
 	if item_list.item_count == 0:
 		return
 	var selected := item_list.get_selected_items()
 	var index := selected[0] if selected.size() > 0 else 0
 	if not item_list.is_item_disabled(index):
-		_on_item_activated(index)
-	
+		_confirm_action_index(index)
+
 func _load_available_actions() -> void:
-	"""Load actions from FKRegistry (no per-modal disk scan)."""
 	available_actions.clear()
 	if editor_globals and editor_globals.registry:
-		available_actions = FKProviderCompat.providers_from_registry(editor_globals.registry, "action")
-	print("[FKSelectActionModal]: Loaded ", available_actions.size(), " actions (registry)")
+		var reg = editor_globals.registry
+		if reg.action_providers.is_empty() and reg.has_method("load_providers"):
+			reg.load_providers()
+		available_actions = FKProviderCompat.providers_from_registry(reg, "action")
+	print("[FKSelectActionModal]: Loaded ", available_actions.size(), " actions for class=", selected_node_class)
 
 func populate_actions(node_path: String, node_class: String) -> void:
 	"""Populate the list with actions compatible with the selected node."""
 	selected_node_path = node_path
 	selected_node_class = node_class
-	# Refresh from registry in case providers were regenerated
+	if _favorites == null:
+		_favorites = FavoritesScript.new()
+	if _recent_items_manager == null:
+		_recent_items_manager = FKRecentItemsManagerUi.new()
 	_load_available_actions()
-	
+
 	if not item_list:
 		return
-	
+
 	_all_items_cache.clear()
-	description_label.text = ""
-	
-	# Filter actions that support this node type
+	if description_label:
+		description_label.text = ""
+
 	for action in available_actions:
-		var supported_types = action.get_supported_types()
-		if _is_node_compatible(node_class, supported_types):
-			var action_name = action.get_name()
-			var action_id = action.get_id()
-			var action_desc := ""
-			if action.has_method("get_description"):
-				action_desc = str(action.get_description())
-			var cat := "General"
-			if supported_types.size() > 0:
-				cat = str(supported_types[0])
-			_all_items_cache.append({
-				"name": action_name,
-				"id": action_id,
-				"description": action_desc,
-				"category": cat,
-				"metadata": {"id": action_id, "inputs": action.get_inputs()}
-			})
-	
-	# Favorites first, then category, then alphabetical
+		if action == null or not action.has_method("get_supported_types"):
+			continue
+		var supported_types: Array = []
+		for t in action.get_supported_types():
+			supported_types.append(str(t))
+		if not _is_node_compatible(node_class, supported_types):
+			continue
+		if not action.has_method("get_id") or not action.has_method("get_name"):
+			continue
+		var action_name = action.get_name()
+		var action_id = str(action.get_id())
+		var action_desc := ""
+		if action.has_method("get_description"):
+			action_desc = str(action.get_description())
+		var cat := "General"
+		if supported_types.size() > 0:
+			cat = str(supported_types[0])
+		var inputs: Array = []
+		if action.has_method("get_inputs"):
+			inputs = action.get_inputs()
+		_all_items_cache.append({
+			"name": action_name,
+			"id": action_id,
+			"description": action_desc,
+			"category": cat,
+			"metadata": {"id": action_id, "inputs": inputs}
+		})
+
 	_all_items_cache.sort_custom(func(a, b):
 		var af: bool = _favorites != null and _favorites.is_action_favorite(str(a.get("id", "")))
 		var bf: bool = _favorites != null and _favorites.is_action_favorite(str(b.get("id", "")))
@@ -154,10 +171,11 @@ func populate_actions(node_path: String, node_class: String) -> void:
 			return ca < cb
 		return str(a["name"]).to_lower() < str(b["name"]).to_lower()
 	)
-			
+
 	_update_list()
 	_populate_recent_list()
 	_focus_search()
+	print("[FKSelectActionModal]: Showing ", _all_items_cache.size(), " actions for ", node_class, " @ ", node_path)
 
 func _focus_search() -> void:
 	if search_box:
@@ -201,12 +219,19 @@ func _update_list(filter_text: String = "") -> void:
 	
 	if item_list.item_count == 0:
 		if filter_text.is_empty():
-			item_list.add_item("No actions available for this node type")
+			item_list.add_item("No actions for this node type")
+			item_list.set_item_disabled(0, true)
+			item_list.add_item("Tip: pick Sprite2D / Node2D for move/rotate/modulate")
+			item_list.set_item_disabled(1, true)
+			item_list.add_item("Tip: pick System for print / sheet variables")
+			item_list.set_item_disabled(2, true)
+			if available_actions.is_empty():
+				item_list.add_item("Registry empty — open FlowKit → Edit → Generate… or Tools → FlowKit")
+				item_list.set_item_disabled(3, true)
 		else:
 			item_list.add_item("No actions found")
-		item_list.set_item_disabled(0, true)
+			item_list.set_item_disabled(0, true)
 	elif not filter_text.is_empty() and item_list.item_count > 0 and not item_list.is_item_disabled(0):
-		# Auto-select first match so Enter confirms quickly
 		item_list.select(0)
 		_on_item_selected(0)
 
@@ -217,24 +242,28 @@ func _is_node_compatible(node_class: String, supported_types: Array) -> bool:
 	return FKProviderCompat.is_node_compatible(node_class, supported_types)
 
 func _on_item_activated(index: int) -> void:
-	"""Handle action selection."""
+	_confirm_action_index(index)
+
+func _confirm_action_index(index: int) -> void:
+	if index < 0 or index >= item_list.item_count:
+		return
 	if item_list.is_item_disabled(index):
 		return
-	
 	var metadata = item_list.get_item_metadata(index)
-	var action_id = metadata["id"]
-	var inputs = metadata["inputs"]
-	
-	# Find action name for recent items
+	if metadata == null or not (metadata is Dictionary):
+		return
+	var action_id = metadata.get("id", "")
+	var inputs = metadata.get("inputs", [])
 	var action_name = ""
 	for action in available_actions:
-		if action.get_id() == action_id:
-			action_name = action.get_name()
+		if action and action.has_method("get_id") and str(action.get_id()) == str(action_id):
+			if action.has_method("get_name"):
+				action_name = action.get_name()
 			break
-	
 	print("[FKSelectActionModal]: Action selected: ", action_id, " for node: ", selected_node_path)
-	_recent_items_manager.add_recent_action(action_id, action_name, selected_node_class)
-	_modal_signals.action_selected.emit(selected_node_path, action_id, inputs)
+	if _recent_items_manager:
+		_recent_items_manager.add_recent_action(str(action_id), action_name, selected_node_class)
+	_modal_signals.action_selected.emit(selected_node_path, str(action_id), inputs)
 	hide()
 
 func _on_item_selected(index: int) -> void:
