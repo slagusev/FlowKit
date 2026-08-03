@@ -637,6 +637,7 @@ func _process(delta: float) -> void:
 	if not scene_root:
 		if current_scene_uid != 0:
 			current_scene_uid = 0
+			current_scene_name = ""
 			blocks_container.clear_unit_nodes()
 			_clear_undo_history()
 			_show_empty_state()
@@ -646,14 +647,18 @@ func _process(delta: float) -> void:
 	if scene_path == "":
 		if current_scene_uid != 0:
 			current_scene_uid = 0
+			current_scene_name = ""
 			blocks_container.clear_unit_nodes()
 			_clear_undo_history()
 			_show_empty_state()
 		return
 
 	var scene_uid := ResourceLoader.get_resource_uid(scene_path)
+	var scene_basename := scene_path.get_file().get_basename()
 	if scene_uid != current_scene_uid:
-		_reset_for_new_scene(scene_uid)
+		_reset_for_new_scene(scene_uid, scene_basename)
+	else:
+		current_scene_name = scene_basename
 		
 var current_scene_uid: int:
 	get:
@@ -661,8 +666,15 @@ var current_scene_uid: int:
 	set(value):
 		editor_globals.current_scene_uid = value
 
-func _reset_for_new_scene(scene_uid: int):
+var current_scene_name: String:
+	get:
+		return editor_globals.current_scene_name
+	set(value):
+		editor_globals.current_scene_name = value
+
+func _reset_for_new_scene(scene_uid: int, scene_basename: String = ""):
 	current_scene_uid = scene_uid
+	current_scene_name = scene_basename
 	_disable_sheet_tracker_for(1)
 	_clear_undo_history()
 	editor_globals.sheet_editor_ready = false
@@ -731,7 +743,7 @@ func _save_sheet() -> FKEventSheet:
 	var units := blocks_container.units
 		
 	var sheet := FKEventSheet.from_units(units)
-	var err := sheet_io.save_sheet(current_scene_uid, sheet)
+	var err := sheet_io.save_sheet(current_scene_uid, sheet, current_scene_name)
 	var result: FKEventSheet = null
 	if err == OK:
 		print("[FKMainEditor]: ✓ Event sheet saved")
@@ -748,7 +760,7 @@ func _refresh_ui(sheet: FKEventSheet = null):
 	if not sheet:
 		# Why this fallback? We want other parts of this script to be able to
 		# refresh the ui without having to look for the sheet first.
-		sheet = sheet_io.load_sheet(current_scene_uid)
+		sheet = sheet_io.load_sheet(current_scene_uid, current_scene_name)
 		
 	_refresh_sheet_ui(sheet)
 	_on_ui_restoration_done()
@@ -2074,17 +2086,13 @@ func _on_action_dropped(source_row: FKEventRowUi, action_data: FKActionUnit, tar
 			_recursive_remove_action_from_list(source_data.actions, action_data)
 		source_row.update_display()
 	
-	# Add to target
+	# Add to target (deep-copy preserves branches / nested actions)
 	var target_data := target_row.get_block()
 	if target_data:
-		# Create a copy of the action data
-		var act_copy := FKActionUnit.new()
-		act_copy.action_id = action_data.action_id
-		act_copy.target_node = action_data.target_node
-		act_copy.inputs = action_data.inputs.duplicate()
-		
-		target_data.actions.append(act_copy)
-		target_row.update_display()
+		var act_copy := action_data.duplicate_block() as FKActionUnit
+		if act_copy:
+			target_data.actions.append(act_copy)
+			target_row.update_display()
 	
 
 func _generate_unique_block_id(event_id: String) -> String:

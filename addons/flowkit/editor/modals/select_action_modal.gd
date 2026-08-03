@@ -54,17 +54,29 @@ func _set_desc_panel_style():
 func _toggle_subs(should_sub: bool):
 	if should_sub and not _is_subbed:
 		search_box.text_changed.connect(_on_search_text_changed)
+		search_box.text_submitted.connect(_on_search_submitted)
 		item_list.item_activated.connect(_on_item_activated)
 		item_list.item_selected.connect(_on_item_selected)
 		recent_item_list.item_activated.connect(_on_recent_item_activated)
 
 	elif _is_subbed and !should_sub:
 		search_box.text_changed.disconnect(_on_search_text_changed)
+		if search_box.text_submitted.is_connected(_on_search_submitted):
+			search_box.text_submitted.disconnect(_on_search_submitted)
 		item_list.item_activated.disconnect(_on_item_activated)
 		item_list.item_selected.disconnect(_on_item_selected)
 		recent_item_list.item_activated.disconnect(_on_recent_item_activated)
 		
 	_is_subbed = should_sub
+
+func _on_search_submitted(_text: String) -> void:
+	# Enter in search selects the first (or currently selected) match
+	if item_list.item_count == 0:
+		return
+	var selected := item_list.get_selected_items()
+	var index := selected[0] if selected.size() > 0 else 0
+	if not item_list.is_item_disabled(index):
+		_on_item_activated(index)
 	
 func _load_available_actions() -> void:
 	"""Load all action scripts from the actions folder."""
@@ -115,21 +127,40 @@ func populate_actions(node_path: String, node_class: String) -> void:
 		if _is_node_compatible(node_class, supported_types):
 			var action_name = action.get_name()
 			var action_id = action.get_id()
+			var action_desc := ""
+			if action.has_method("get_description"):
+				action_desc = str(action.get_description())
 			
 			_all_items_cache.append({
 				"name": action_name,
+				"id": action_id,
+				"description": action_desc,
 				"metadata": {"id": action_id, "inputs": action.get_inputs()}
 			})
+	
+	# Alphabetical for scanability
+	_all_items_cache.sort_custom(func(a, b): return str(a["name"]).to_lower() < str(b["name"]).to_lower())
 			
 	_update_list()
 	_populate_recent_list()
+	_focus_search()
+
+func _focus_search() -> void:
+	if search_box:
+		search_box.clear()
+		search_box.grab_focus()
 
 func _update_list(filter_text: String = "") -> void:
 	item_list.clear()
-	var filter_lower = filter_text.to_lower()
+	var filter_lower = filter_text.to_lower().strip_edges()
 	
 	for item in _all_items_cache:
-		if filter_text.is_empty() or filter_lower in item["name"].to_lower():
+		var haystack := (
+			str(item.get("name", "")) + " " +
+			str(item.get("id", "")) + " " +
+			str(item.get("description", ""))
+		).to_lower()
+		if filter_text.is_empty() or filter_lower in haystack:
 			item_list.add_item(item["name"])
 			var index = item_list.item_count - 1
 			item_list.set_item_metadata(index, item["metadata"])
@@ -140,6 +171,10 @@ func _update_list(filter_text: String = "") -> void:
 		else:
 			item_list.add_item("No actions found")
 		item_list.set_item_disabled(0, true)
+	elif not filter_text.is_empty() and item_list.item_count > 0 and not item_list.is_item_disabled(0):
+		# Auto-select first match so Enter confirms quickly
+		item_list.select(0)
+		_on_item_selected(0)
 
 func _on_search_text_changed(new_text: String) -> void:
 	_update_list(new_text)

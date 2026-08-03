@@ -114,33 +114,30 @@ func _load_sheets_for_scene(scene_root: Node) -> void:
 	# Start from the scene root
 	_collect_node_paths(scene_root, uid_to_node)
 
-	# Load sheets for each discovered scene UID
+	# Load sheets for each discovered scene UID (project-local + legacy paths)
+	var sheet_io := FKSheetIO.new()
 	for uid in uid_to_node.keys():
 		var node_root: Node = uid_to_node[uid]
 		var scene_path: String = node_root.scene_file_path
 		var scene_name: String = scene_path.get_file().get_basename()
-		var sheet_path: String = "res://addons/flowkit/saved/event_sheet/%d.tres" % uid
+		var sheet: FKEventSheet = sheet_io.load_sheet(uid, scene_name)
 
-		if ResourceLoader.exists(sheet_path):
-			var sheet: FKEventSheet = load(sheet_path)
-			if sheet:
-				# Ensure all blocks have unique IDs (for backward compatibility with old saved sheets)
-				for block in sheet.events:
-					if block:
-						block.ensure_block_id()
-				# Also ensure block IDs for events inside groups
-				_ensure_block_ids_in_groups(sheet.groups)
-				var entry := {"sheet": sheet, "root": node_root, "scene_name": scene_name, "uid": uid}
-				active_sheets.append(entry)
-				# Create per-block event provider instances (each block gets its own)
-				_create_block_providers(entry)
-				# Setup signal-based events so they can connect to node signals
-				_setup_signal_events(entry)
-				print("[FlowKit] Loaded event sheet for scene: ", scene_name, " (node: ", node_root.name, ") with ", sheet.events.size(), " events")
-			else:
-				print("[FlowKit] Failed to load sheet resource at: ", sheet_path)
+		if sheet:
+			# Ensure all blocks have unique IDs (for backward compatibility with old saved sheets)
+			for block in sheet.events:
+				if block:
+					block.ensure_block_id()
+			# Also ensure block IDs for events inside groups
+			_ensure_block_ids_in_groups(sheet.groups)
+			var entry := {"sheet": sheet, "root": node_root, "scene_name": scene_name, "uid": uid}
+			active_sheets.append(entry)
+			# Create per-block event provider instances (each block gets its own)
+			_create_block_providers(entry)
+			# Setup signal-based events so they can connect to node signals
+			_setup_signal_events(entry)
+			print("[FlowKit] Loaded event sheet for scene: ", scene_name, " (node: ", node_root.name, ") with ", sheet.events.size(), " events")
 		else:
-			print("[FlowKit] No sheet found for scene: ", scene_name, " (expected at ", sheet_path, ")")
+			print("[FlowKit] No sheet found for scene: ", scene_name, " (uid: ", uid, ")")
 
 
 # Helper method moved outside

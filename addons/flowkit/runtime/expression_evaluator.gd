@@ -242,78 +242,79 @@ target_node: Node = null) -> FKEvalResult:
 	input_names.append("ProjectSettings")
 	input_values.append(ProjectSettings)
 	
-	# Try to get FlowKitSystem for accessing global variables
-	if context_node:
-		var system = context_node.get_tree().root.get_node_or_null("/root/FlowKitSystem")
-		if system:
-			input_names.append("system")
-			input_values.append(system)
-			
-			# Expose delta from the system (set each frame by the engine)
-			input_names.append("delta")
-			input_values.append(system.delta)
-			
-			# Inject n_ (node alterable) variables from the target node
-			var n_node: Node = target_node if target_node else context_node
-			if n_node:
-				# First inject from FlowKitSystem node variables
-				if system.has_method("get_node_variable_names"):
-					var var_names: Array = system.get_node_variable_names(n_node)
-					for vname in var_names:
-						var input_key = "n_" + vname
-						if not input_names.has(input_key):
-							input_names.append(input_key)
-							input_values.append(system.get_node_var(n_node, vname, 0))
-				
-				# Also inject from the node's own script properties (exported @export vars)
-				for prop in n_node.get_property_list():
-					var pname: String = prop.get("name", "")
-					if pname.is_empty():
-						continue
-					var input_key = "n_" + pname
-					if not input_names.has(input_key):
-						# Only expose user-defined properties (PROPERTY_USAGE_SCRIPT_VARIABLE)
-						var usage: int = prop.get("usage", 0)
-						if usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-							input_names.append(input_key)
-							input_values.append(n_node.get(pname))
+	# Resolve FlowKitSystem from any available node so globals always inject.
+	var system = null
+	var tree_node: Node = context_node if context_node else (scene_root if scene_root else target_node)
+	if tree_node and tree_node.get_tree():
+		system = tree_node.get_tree().root.get_node_or_null("/root/FlowKitSystem")
+	
+	if system:
+		input_names.append("system")
+		input_values.append(system)
 		
-		# Also inject from node metadata directly (works even without FlowKitSystem)
+		# Expose delta from the system (set each frame by the engine)
+		input_names.append("delta")
+		input_values.append(system.delta)
+		
+		# Inject n_ (node alterable) variables from the target node
 		var n_node: Node = target_node if target_node else context_node
-		if n_node and n_node.has_meta("flowkit_variables"):
-			var meta_vars = n_node.get_meta("flowkit_variables")
-			if meta_vars is Dictionary:
-				var meta_types: Dictionary = {}
-				if n_node.has_meta("flowkit_variable_types"):
-					var types_raw = n_node.get_meta("flowkit_variable_types")
-					if types_raw is Dictionary:
-						meta_types = types_raw
-				
-				for vname in meta_vars.keys():
+		if n_node:
+			if system.has_method("get_node_variable_names"):
+				var var_names: Array = system.get_node_variable_names(n_node)
+				for vname in var_names:
 					var input_key = "n_" + vname
 					if not input_names.has(input_key):
-						var value = meta_vars[vname]
-						# Apply type conversion
-						if meta_types.has(vname):
-							var var_type: String = meta_types[vname]
-							match var_type:
-								"int":
-									if value is String:
-										value = int(value) if value.is_valid_int() else 0
-								"float":
-									if value is String:
-										value = float(value) if value.is_valid_float() else 0.0
-								"bool":
-									if value is String:
-										value = value.to_lower() == "true"
 						input_names.append(input_key)
-						input_values.append(value)
+						input_values.append(system.get_node_var(n_node, vname, 0))
 			
-			# Also expose all system variables directly
-			if "variables" in system and system.variables is Dictionary:
-				for var_name in system.variables.keys():
+			# Also inject from the node's own script properties (exported @export vars)
+			for prop in n_node.get_property_list():
+				var pname: String = prop.get("name", "")
+				if pname.is_empty():
+					continue
+				var input_key = "n_" + pname
+				if not input_names.has(input_key):
+					var usage: int = prop.get("usage", 0)
+					if usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+						input_names.append(input_key)
+						input_values.append(n_node.get(pname))
+		
+		# Always expose global system variables when FlowKitSystem is available.
+		if "variables" in system and system.variables is Dictionary:
+			for var_name in system.variables.keys():
+				if not input_names.has(var_name):
 					input_names.append(var_name)
 					input_values.append(system.variables[var_name])
+	
+	# Inject node metadata alterables (works even without FlowKitSystem).
+	var n_node_meta: Node = target_node if target_node else context_node
+	if n_node_meta and n_node_meta.has_meta("flowkit_variables"):
+		var meta_vars = n_node_meta.get_meta("flowkit_variables")
+		if meta_vars is Dictionary:
+			var meta_types: Dictionary = {}
+			if n_node_meta.has_meta("flowkit_variable_types"):
+				var types_raw = n_node_meta.get_meta("flowkit_variable_types")
+				if types_raw is Dictionary:
+					meta_types = types_raw
+			
+			for vname in meta_vars.keys():
+				var input_key = "n_" + vname
+				if not input_names.has(input_key):
+					var value = meta_vars[vname]
+					if meta_types.has(vname):
+						var var_type: String = meta_types[vname]
+						match var_type:
+							"int":
+								if value is String:
+									value = int(value) if value.is_valid_int() else 0
+							"float":
+								if value is String:
+									value = float(value) if value.is_valid_float() else 0.0
+							"bool":
+								if value is String:
+									value = value.to_lower() == "true"
+					input_names.append(input_key)
+					input_values.append(value)
 	
 	# Parse the expression
 	var parse_error = expression.parse(expr_str, input_names)

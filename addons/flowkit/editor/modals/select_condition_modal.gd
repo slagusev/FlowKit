@@ -123,21 +123,35 @@ func populate_conditions(node_path: String, node_class: String) -> void:
 		if _is_node_compatible(node_class, supported_types):
 			var condition_name = condition.get_name()
 			var condition_id = condition.get_id()
+			var condition_desc := ""
+			if condition.has_method("get_description"):
+				condition_desc = str(condition.get_description())
 			
 			_all_items_cache.append({
 				"name": condition_name,
+				"id": condition_id,
+				"description": condition_desc,
 				"metadata": {"id": condition_id, "inputs": condition.get_inputs()}
 			})
-			
+	
+	_all_items_cache.sort_custom(func(a, b): return str(a["name"]).to_lower() < str(b["name"]).to_lower())
 	_update_list()
 	_populate_recent_list()
+	if search_box:
+		search_box.clear()
+		search_box.grab_focus()
 
 func _update_list(filter_text: String = "") -> void:
 	item_list.clear()
-	var filter_lower = filter_text.to_lower()
+	var filter_lower = filter_text.to_lower().strip_edges()
 	
 	for item in _all_items_cache:
-		if filter_text.is_empty() or filter_lower in item["name"].to_lower():
+		var haystack := (
+			str(item.get("name", "")) + " " +
+			str(item.get("id", "")) + " " +
+			str(item.get("description", ""))
+		).to_lower()
+		if filter_text.is_empty() or filter_lower in haystack:
 			item_list.add_item(item["name"])
 			var index = item_list.item_count - 1
 			item_list.set_item_metadata(index, item["metadata"])
@@ -148,6 +162,9 @@ func _update_list(filter_text: String = "") -> void:
 		else:
 			item_list.add_item("No conditions found")
 		item_list.set_item_disabled(0, true)
+	elif not filter_text.is_empty() and item_list.item_count > 0 and not item_list.is_item_disabled(0):
+		item_list.select(0)
+		_on_item_selected(0)
 
 func _on_search_text_changed(new_text: String) -> void:
 	_update_list(new_text)

@@ -77,7 +77,10 @@ func _save_sheet() -> FKEventSheet:
 	
 	var result: FKEventSheet = null
 	var sheet_io := _globals.sheet_io
-	var err := sheet_io.save_sheet(current_scene_uid, sheet)
+	var scene_name: String = ""
+	if _globals and "current_scene_name" in _globals:
+		scene_name = _globals.current_scene_name
+	var err := sheet_io.save_sheet(current_scene_uid, sheet, scene_name)
 
 	if err == OK:
 		print("[FKSheetAutoSaver] ✓ Event sheet saved")

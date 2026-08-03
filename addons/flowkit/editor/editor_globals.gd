@@ -31,6 +31,8 @@ var registry: FKRegistry
 var modal_signals: FKModalSignals = FKModalSignals.new()
 var unit_ui_signals := FKUnitUiSignals.new()
 var current_scene_uid: int = 0
+## Basename of the currently edited scene (for human-readable sheet filenames).
+var current_scene_name: String = ""
 
 ## Should return a SceneTree object. No args.
 var get_main_editor_tree: Callable

@@ -55,7 +55,6 @@ func _serialize_branch_conds_and_actions(result: Dictionary):
 		result["branch_actions"] = copied_actions
 		
 func deserialize(dict: Dictionary) -> void:
-	print("Deserializing fk action")
 	super.deserialize(dict)
 	action_id = dict.get("action_id", "")
 	target_node = NodePath(dict.get("target_node", ""))
@@ -102,8 +101,10 @@ func duplicate_block() -> FKUnit:
 	
 	var branch_actions_copy: Array[FKActionUnit] = []
 	for elem in branch_actions:
-		var act_copy: FKActionUnit = elem.duplicate()
-		branch_actions_copy.append(act_copy)
+		# Deep-copy nested branches via duplicate_block (not Resource.duplicate).
+		var act_copy: FKActionUnit = elem.duplicate_block() as FKActionUnit
+		if act_copy:
+			branch_actions_copy.append(act_copy)
 	copy.branch_actions = branch_actions_copy
 		
 	return copy

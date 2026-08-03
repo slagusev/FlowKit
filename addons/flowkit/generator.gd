@@ -679,7 +679,8 @@ func _write_file(path: String, content: String) -> void:
 # MANIFEST GENERATION
 # ============================================================================
 
-const EVENT_SHEET_DIR = "res://addons/flowkit/saved/event_sheet/"
+const EVENT_SHEET_DIR_LEGACY = "res://addons/flowkit/saved/event_sheet/"
+const EVENT_SHEET_DIR_PROJECT = "res://flowkit/event_sheets/"
 
 ## Generates an optimized provider manifest resource for exported builds.
 ## Only includes providers that are actively used in the project's event sheets,
@@ -783,24 +784,33 @@ func _scan_used_provider_ids() -> Dictionary:
 		"behavior_ids": {},
 	}
 
-	# Scan event sheets
-	var sheet_dir: DirAccess = DirAccess.open(EVENT_SHEET_DIR)
-	if sheet_dir:
-		sheet_dir.list_dir_begin()
-		var file_name: String = sheet_dir.get_next()
-		while file_name != "":
-			if file_name.ends_with(".tres"):
-				var sheet_path: String = EVENT_SHEET_DIR + file_name
-				var sheet: Resource = load(sheet_path)
-				if sheet is FKEventSheet:
-					_extract_ids_from_sheet(sheet, used)
-			file_name = sheet_dir.get_next()
-		sheet_dir.list_dir_end()
+	# Scan event sheets from project-local and legacy directories
+	for sheet_dir_path in [EVENT_SHEET_DIR_PROJECT, EVENT_SHEET_DIR_LEGACY, FKSheetIO.get_sheet_directory() + "/"]:
+		_scan_sheet_directory(sheet_dir_path, used)
 
 	# Scan scene files for behavior metadata
 	_scan_scenes_for_behaviors(used)
 
 	return used
+
+func _scan_sheet_directory(sheet_dir_path: String, used: Dictionary) -> void:
+	var sheet_dir: DirAccess = DirAccess.open(sheet_dir_path)
+	if not sheet_dir:
+		return
+	sheet_dir.list_dir_begin()
+	var file_name: String = sheet_dir.get_next()
+	while file_name != "":
+		if file_name.ends_with(".tres"):
+			var sheet_path: String = sheet_dir_path.path_join(file_name) if sheet_dir_path.ends_with("/") \
+				else sheet_dir_path + "/" + file_name
+			# Normalize double slashes from path_join edge cases
+			if sheet_dir_path.ends_with("/"):
+				sheet_path = sheet_dir_path + file_name
+			var sheet: Resource = load(sheet_path)
+			if sheet is FKEventSheet:
+				_extract_ids_from_sheet(sheet, used)
+		file_name = sheet_dir.get_next()
+	sheet_dir.list_dir_end()
 
 
 ## Extract all provider IDs from a single event sheet.

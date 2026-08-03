@@ -19,6 +19,10 @@ var variables: Dictionary = {}
 # Node variable storage (per-node variables using metadata)
 var node_variables: Dictionary = {}
 
+# Named callables registered by Define Function / usable via Call Function.
+# Key: function name (String) → Callable
+var functions: Dictionary = {}
+
 var global_signals: FKGlobalSignals = FKGlobalSignals.new()
 
 func _ready() -> void:
@@ -48,6 +52,35 @@ func clear_var(name: String) -> void:
 
 func clear_all_vars() -> void:
 	variables.clear()
+
+# --- Named functions (Define Function / Call Function) ---------------------
+func register_function(function_name: String, callable: Callable) -> void:
+	if function_name.is_empty():
+		push_warning("[FlowKitSystem] Cannot register function with empty name.")
+		return
+	if not callable.is_valid():
+		push_warning("[FlowKitSystem] Cannot register invalid callable for '%s'." % function_name)
+		return
+	functions[function_name] = callable
+
+func unregister_function(function_name: String) -> void:
+	functions.erase(function_name)
+
+func has_function(function_name: String) -> bool:
+	return functions.has(function_name)
+
+func call_function(function_name: String, args: Array = []) -> Variant:
+	if not functions.has(function_name):
+		push_warning("[FlowKitSystem] Function not found: '%s'" % function_name)
+		return null
+	var cb: Callable = functions[function_name]
+	if not cb.is_valid():
+		push_warning("[FlowKitSystem] Function '%s' has an invalid callable." % function_name)
+		return null
+	return cb.callv(args)
+
+func clear_all_functions() -> void:
+	functions.clear()
 
 # Node variable management
 func set_node_var(node: Node, var_name: String, value: Variant) -> void:

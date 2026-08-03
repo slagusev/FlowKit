@@ -45,4 +45,4 @@ func teardown(node: Node, block_id: String = "") -> void:
 	pass
 	
 func get_class() -> String:
-	return "FKCondition"
+	return "FKEvent"

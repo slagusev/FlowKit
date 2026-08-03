@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="FlowKit — Clickteam Fusion / Construct style visual event sheets for Godot 4. Enhanced fork with stability, UX, and more providers."
+    />
+    <title>FlowKit — Visual Event Sheets for Godot 4</title>
+    <link rel="stylesheet" href="assets/style.css" />
+    <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="container">
+        <div class="nav-brand">
+          <a href="/">
+            <span class="brand-name">FlowKit</span>
+            <span class="brand-fork">fork</span>
+          </a>
+        </div>
+        <button class="nav-toggle" aria-label="Menu" id="navToggle">☰</button>
+        <ul class="nav-links" id="navLinks">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#whats-new">What's New</a></li>
+          <li><a href="#examples">Examples</a></li>
+          <li><a href="#getting-started">Start</a></li>
+          <li><a href="#providers">Providers</a></li>
+          <li>
+            <a
+              href="https://github.com/slagusev/FlowKit"
+              target="_blank"
+              rel="noopener"
+              class="nav-github"
+              >GitHub</a
+            >
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="container">
+        <div class="hero-content">
+          <img
+            src="assets/Wordmark.svg"
+            alt="FlowKit"
+            class="hero-logo"
+            width="320"
+            height="80"
+          />
+          <p class="hero-subtitle">
+            Visual event-driven programming for Godot&nbsp;4
+          </p>
+          <p class="hero-description">
+            Build game logic with event sheets — conditions and actions in a
+            spreadsheet-like grid — inspired by Clickteam Fusion 2.5 and
+            Construct. This enhanced fork focuses on stability, clearer UX, and
+            a richer set of built-in providers.
+          </p>
+          <div class="hero-badges">
+            <span class="badge badge-blue">Godot 4.5+</span>
+            <span class="badge badge-green">MIT License</span>
+            <span class="badge badge-purple">Open Source Fork</span>
+            <span class="badge badge-blue">v2.1</span>
+          </div>
+          <div class="hero-cta">
+            <a
+              href="https://github.com/slagusev/FlowKit"
+              target="_blank"
+              rel="noopener"
+              class="btn btn-large btn-primary"
+              >Get the Fork</a
+            >
+            <a
+              href="https://github.com/LexianDEV/FlowKit"
+              target="_blank"
+              rel="noopener"
+              class="btn btn-large btn-secondary"
+              >Original by LexianDEV</a
+            >
+          </div>
+          <p class="hero-credit">
+            Upstream project by
+            <a href="https://github.com/LexianDEV/FlowKit" target="_blank" rel="noopener"
+              >LexianDEV</a
+            >
+            · improvements in
+            <a href="https://github.com/slagusev/FlowKit" target="_blank" rel="noopener"
+              >slagusev/FlowKit</a
+            >
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="overview" class="section">
+      <div class="container">
+        <h2>Overview</h2>
+        <p class="section-intro">
+          FlowKit lets you create gameplay without writing full scripts: pick a
+          node, choose an event (On Process, On Body Entered, On Ready…), add
+          conditions, then stack actions. Sheets are stored as
+          <code>.tres</code> resources and run automatically when the scene
+          starts.
+        </p>
+      </div>
+    </section>
+
+    <section id="features" class="section section-alt">
+      <div class="container">
+        <h2>Key Features</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <h3>Event Sheet System</h3>
+            <p>
+              Events, conditions, actions, groups, comments, and branch blocks
+              (if / else / repeat).
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔌</div>
+            <h3>Node Targeting</h3>
+            <p>
+              Bind logic to any scene node or the global System object — with
+              search and recent items.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📦</div>
+            <h3>Extensible Providers</h3>
+            <p>
+              Drop-in actions, conditions, and events as GDScript files —
+              auto-discovered by the registry.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Runtime Engine</h3>
+            <p>
+              Autoloads load sheets by scene UID, support multi-frame waits, and
+              isolate concurrent actions.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">💾</div>
+            <h3>Project-Local Sheets</h3>
+            <p>
+              Sheets save under <code>res://flowkit/event_sheets/</code> with
+              human-readable names (legacy paths still load).
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🧪</div>
+            <h3>Expressions</h3>
+            <p>
+              GDScript expressions with <code>node</code>,
+              <code>scene_root</code>, <code>system</code>, <code>delta</code>,
+              and global variables.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="whats-new" class="section">
+      <div class="container">
+        <h2>What's New in This Fork</h2>
+        <div class="changelog-grid">
+          <div class="changelog-card">
+            <h3>Stability</h3>
+            <ul>
+              <li>Per-invocation multi-frame action waits (no shared hang flag)</li>
+              <li>Deep-copy of nested branches on drag / duplicate</li>
+              <li>On Ready uses <code>Node.ready</code> correctly</li>
+              <li>Wait For Input validates bindings and times out safely</li>
+              <li>Global variables always available in expressions</li>
+            </ul>
+          </div>
+          <div class="changelog-card">
+            <h3>UX</h3>
+            <ul>
+              <li>Search by name, id, and description in selectors</li>
+              <li>Auto-focus search; Enter confirms first match</li>
+              <li>Alphabetical provider lists</li>
+              <li>Scene-named event sheet files</li>
+            </ul>
+          </div>
+          <div class="changelog-card">
+            <h3>New Providers</h3>
+            <ul>
+              <li>Area2D: On Body Entered / Exited</li>
+              <li>Is on Wall / Ceiling, Distance, Random Chance</li>
+              <li>Tween Position, Look At, Queue Free</li>
+              <li>Create Instance, Play Animation</li>
+              <li>Define Function / Call Function</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="examples" class="section section-alt">
+      <div class="container">
+        <h2>Examples</h2>
+        <p class="section-intro">
+          Screenshots from the editor. Click to open full size so the full event
+          sheet hierarchy stays visible.
+        </p>
+        <div class="examples-grid">
+          <a
+            class="example-card example-card-link"
+            href="assets/examples/example1.png"
+            target="_blank"
+            rel="noopener"
+          >
+            <div class="example-image example-image-full">
+              <img
+                src="assets/examples/example1.png"
+                alt="Event sheet with nested conditions and actions"
+              />
+            </div>
+            <h3>Event Sheet Editor</h3>
+            <p>Events on the left; conditions and indented actions on the right</p>
+          </a>
+          <a
+            class="example-card example-card-link"
+            href="assets/examples/example2.png"
+            target="_blank"
+            rel="noopener"
+          >
+            <div class="example-image example-image-full">
+              <img
+                src="assets/examples/example2.png"
+                alt="Another FlowKit event sheet view"
+              />
+            </div>
+            <h3>Sheet Workflow</h3>
+            <p>Groups, multiple events, and runtime-oriented logic</p>
+          </a>
+          <a
+            class="example-card example-card-link"
+            href="assets/examples/example3.png"
+            target="_blank"
+            rel="noopener"
+          >
+            <div class="example-image example-image-full">
+              <img
+                src="assets/examples/example3.png"
+                alt="Node and provider selection"
+              />
+            </div>
+            <h3>Node &amp; Provider Selection</h3>
+            <p>Pick targets from the scene tree and choose providers</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section id="getting-started" class="section">
+      <div class="container">
+        <h2>Getting Started</h2>
+        <div class="content-block">
+          <h3>Installation</h3>
+          <ol class="styled-list">
+            <li>
+              Clone
+              <a href="https://github.com/slagusev/FlowKit" target="_blank" rel="noopener"
+                >github.com/slagusev/FlowKit</a
+              >
+              or download a release
+            </li>
+            <li>
+              Copy <code>addons/flowkit</code> into your project’s
+              <code>addons/</code> folder
+            </li>
+            <li>
+              Enable the plugin:
+              <strong>Project → Project Settings → Plugins</strong>
+            </li>
+            <li>
+              Open the <strong>FlowKit</strong> main screen (or panel) and create
+              a sheet for the current scene
+            </li>
+          </ol>
+        </div>
+        <div class="content-block">
+          <h3>First sheet</h3>
+          <ol class="styled-list">
+            <li>Open a scene, switch to FlowKit</li>
+            <li><strong>Add Event</strong> → pick a node → pick an event</li>
+            <li>Optional: <strong>Add Condition</strong></li>
+            <li><strong>Add Action</strong> → configure expression inputs</li>
+            <li>
+              Sheets auto-save to
+              <code>res://flowkit/event_sheets/&lt;SceneName&gt;_&lt;uid&gt;.tres</code>
+            </li>
+          </ol>
+          <p class="note">
+            Requires Godot 4.5+. Tested with Godot 4.6. Demos live under
+            <code>addons/flowkit/demos/</code>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture" class="section section-alt">
+      <div class="container">
+        <h2>Architecture</h2>
+        <p class="section-intro">Dual-mode design: editor authoring + runtime execution.</p>
+        <div class="architecture-grid">
+          <div class="arch-card">
+            <h3>Editor</h3>
+            <ul>
+              <li>Main screen event sheet UI</li>
+              <li>Modals for nodes / events / conditions / actions</li>
+              <li>Undo stack, clipboard, auto-save</li>
+              <li>Provider generator &amp; export manifest</li>
+            </ul>
+          </div>
+          <div class="arch-card">
+            <h3>Runtime</h3>
+            <ul>
+              <li>Autoloads: <code>FlowKit</code> + <code>FlowKitSystem</code></li>
+              <li>Scene detection by resource UID</li>
+              <li>Signal events + polled events</li>
+              <li>Branches, behaviors, multi-frame actions</li>
+            </ul>
+          </div>
+        </div>
+        <div class="code-block">
+          <h4>Event sheet (simplified)</h4>
+          <pre><code>FKEventSheet
+  events / groups / comments
+    FKEventUnit
+      conditions[] → FKConditionUnit
+      actions[]    → FKActionUnit (may nest if/else/repeat)</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="providers" class="section">
+      <div class="container">
+        <h2>Built-in Providers (highlights)</h2>
+        <div class="providers-grid">
+          <div class="provider-category">
+            <h3>Events</h3>
+            <ul>
+              <li>On Ready, On Process, Physics Process</li>
+              <li>Input: key, mouse, actions</li>
+              <li>Area2D body entered / exited</li>
+              <li>Timer timeout, Button pressed</li>
+            </ul>
+          </div>
+          <div class="provider-category">
+            <h3>Conditions</h3>
+            <ul>
+              <li>Key / action / mouse state</li>
+              <li>Is on floor / wall / ceiling</li>
+              <li>Distance less than, random chance</li>
+              <li>Compare variables, FPS, pause</li>
+            </ul>
+          </div>
+          <div class="provider-category">
+            <h3>Actions</h3>
+            <ul>
+              <li>Print, set variable, wait (sec/frames/input)</li>
+              <li>Move &amp; slide, velocity, tween position</li>
+              <li>Create instance, queue free, look at</li>
+              <li>Define / call function, play animation</li>
+            </ul>
+          </div>
+        </div>
+        <p class="section-intro" style="margin-top: 2rem">
+          Custom providers: add a <code>.gd</code> under
+          <code>addons/flowkit/actions|conditions|events/</code> extending
+          <code>FKAction</code> / <code>FKCondition</code> / <code>FKEvent</code>.
+        </p>
+      </div>
+    </section>
+
+    <section id="docs" class="section section-alt">
+      <div class="container">
+        <h2>Docs &amp; Community</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <h3>Fork README</h3>
+            <p>
+              <a href="https://github.com/slagusev/FlowKit#readme" target="_blank" rel="noopener"
+                >Installation &amp; fork notes</a
+              >
+            </p>
+          </div>
+          <div class="feature-card">
+            <h3>Upstream Wiki</h3>
+            <p>
+              <a
+                href="https://github.com/LexianDEV/FlowKit/wiki"
+                target="_blank"
+                rel="noopener"
+                >LexianDEV wiki</a
+              >
+              still applies for core concepts.
+            </p>
+          </div>
+          <div class="feature-card">
+            <h3>Issues</h3>
+            <p>
+              Report fork-specific bugs on
+              <a href="https://github.com/slagusev/FlowKit/issues" target="_blank" rel="noopener"
+                >slagusev/FlowKit</a
+              >.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="container">
+        <p>
+          FlowKit fork by slagusev · original by LexianDEV · MIT License · Made
+          for the Godot community
+        </p>
+      </div>
+    </footer>
+
+    <script src="assets/script.js"></script>
+  </body>
+</html>

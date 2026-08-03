@@ -123,9 +123,14 @@ func populate_events(node_path: String, node_class: String) -> void:
 			if _is_node_compatible(node_class, supported_types):
 				var event_name = event.get_name()
 				var event_id = event.get_id()
+				var event_desc := ""
+				if event.has_method("get_description"):
+					event_desc = str(event.get_description())
 				
 				_all_items_cache.append({
 					"name": event_name,
+					"id": event_id,
+					"description": event_desc,
 					"metadata": event_id
 				})
 		elif event.has_method("get_events_for"):
@@ -136,18 +141,29 @@ func populate_events(node_path: String, node_class: String) -> void:
 				for event_data in events_list:
 					_all_items_cache.append({
 						"name": event_data["name"],
+						"id": event_data["id"],
+						"description": event_data.get("description", ""),
 						"metadata": event_data["id"]
 					})
 	
+	_all_items_cache.sort_custom(func(a, b): return str(a["name"]).to_lower() < str(b["name"]).to_lower())
 	_update_list()
 	_populate_recent_list()
+	if search_box:
+		search_box.clear()
+		search_box.grab_focus()
 
 func _update_list(filter_text: String = "") -> void:
 	item_list.clear()
-	var filter_lower = filter_text.to_lower()
+	var filter_lower = filter_text.to_lower().strip_edges()
 	
 	for item in _all_items_cache:
-		if filter_text.is_empty() or filter_lower in item["name"].to_lower():
+		var haystack := (
+			str(item.get("name", "")) + " " +
+			str(item.get("id", "")) + " " +
+			str(item.get("description", ""))
+		).to_lower()
+		if filter_text.is_empty() or filter_lower in haystack:
 			item_list.add_item(item["name"])
 			var index = item_list.item_count - 1
 			item_list.set_item_metadata(index, item["metadata"])
@@ -158,6 +174,9 @@ func _update_list(filter_text: String = "") -> void:
 		else:
 			item_list.add_item("No events found")
 		item_list.set_item_disabled(0, true)
+	elif not filter_text.is_empty() and item_list.item_count > 0 and not item_list.is_item_disabled(0):
+		item_list.select(0)
+		_on_item_selected(0)
 
 func _on_search_text_changed(new_text: String) -> void:
 	_update_list(new_text)

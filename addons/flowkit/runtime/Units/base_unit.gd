@@ -56,7 +56,6 @@ func get_display_name() -> String:
 
 # Subclasses override this to return a Dictionary representation.
 func serialize() -> Dictionary:
-	print("Serializing an FKUnit")
 	var result: Dictionary = {
 		"type": block_type,
 		"personal_id": personal_id
@@ -65,12 +64,10 @@ func serialize() -> Dictionary:
 
 ## Subclasses override this to populate themselves from a Dictionary.
 func deserialize(dict: Dictionary) -> void:
-	print("Deserializing fk unit base")
 	personal_id = dict.get("personal_id")
 
 # Deep-copy contract for undo/redo and clipboard.
 func duplicate_block() -> FKUnit:
-	print("Duplicating an fkunit")
 	var copy := self.duplicate(true)
 	return copy
 	
@@ -82,7 +79,7 @@ static func _duplicate_blocks(to_duplicate: Array[FKUnit]) -> Array[FKUnit]:
 	for elem in to_duplicate:
 		if elem:
 			var elem_copy := elem.duplicate_block()
-			result.append(elem)
+			result.append(elem_copy)
 	return result
 
 static func _to_base_unit_arr(arr: Array) -> Array[FKUnit]:
