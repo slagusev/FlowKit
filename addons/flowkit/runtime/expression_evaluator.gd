@@ -58,6 +58,12 @@ target_node: Node = null, expected_type: int = -1) -> Variant:
 		if p_val.success:
 			return _check_type(p_val.value, expected_type, expr_str)
 	
+	# Subsheet return shorthand: r_value (alias system.subsheet_return)
+	if expr_str == "r_value" or expr_str == "subsheet_return":
+		var r_val := _resolve_subsheet_return(context_node if context_node else scene_root)
+		if r_val.success:
+			return _check_type(r_val.value, expected_type, expr_str)
+	
 	# Try to parse as a literal value first
 	var literal_result := _try_parse_literal(expr_str)
 	if literal_result.success:
@@ -106,6 +112,14 @@ static func _resolve_subsheet_param(from_node: Node, var_name: String) -> FKEval
 	if system and "subsheet_params" in system and system.subsheet_params is Dictionary:
 		if system.subsheet_params.has(var_name):
 			return FKEvalResult.succeeded(system.subsheet_params[var_name])
+	return FKEvalResult.failed()
+
+static func _resolve_subsheet_return(from_node: Node) -> FKEvalResult:
+	if from_node == null or from_node.get_tree() == null:
+		return FKEvalResult.failed()
+	var system = from_node.get_tree().root.get_node_or_null("/root/FlowKitSystem")
+	if system and "subsheet_return" in system:
+		return FKEvalResult.succeeded(system.subsheet_return)
 	return FKEvalResult.failed()
 
 static func _resolve_n_variable(node: Node, var_name: String) -> FKEvalResult:

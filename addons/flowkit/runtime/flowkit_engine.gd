@@ -392,6 +392,7 @@ func _debug(from: Node, kind: String, msg: String) -> void:
 ## - Subsequent or_with_previous=true conditions join that group as OR
 ## - Groups are AND'd together
 ## Empty list → pass (same as legacy).
+## Disabled conditions are skipped (do not affect the group).
 func _conditions_pass(conditions: Array, current_root: Node, block_id: String) -> bool:
 	if conditions.is_empty():
 		return true
@@ -401,6 +402,8 @@ func _conditions_pass(conditions: Array, current_root: Node, block_id: String) -
 	var current_group: Array = []
 	for cond in conditions:
 		if cond == null:
+			continue
+		if "enabled" in cond and not cond.enabled:
 			continue
 		if current_group.is_empty() or not cond.or_with_previous:
 			if not current_group.is_empty():
@@ -412,24 +415,64 @@ func _conditions_pass(conditions: Array, current_root: Node, block_id: String) -
 		groups.append(current_group)
 	
 	# AND of groups; each group is OR of its members
-	for group in groups:
+	for gi in range(groups.size()):
+		var group = groups[gi]
 		var group_passed := false
+		var fail_details: PackedStringArray = []
 		for cond in group:
-			if _check_single_condition(cond, current_root, block_id):
+			var detail := {}
+			if _check_single_condition(cond, current_root, block_id, detail):
 				group_passed = true
 				break
+			else:
+				fail_details.append(str(detail.get("explain", cond.condition_id)))
 		if not group_passed:
+			_debug(current_root, "cond_fail", "AND-group %d failed: %s" % [gi, " | ".join(fail_details)])
+			var system = get_node_or_null(_path_to_sys)
+			if system and "last_cond_fail" in system:
+				system.last_cond_fail = " | ".join(fail_details)
 			return false
 	return true
 
-func _check_single_condition(cond: FKConditionUnit, current_root: Node, block_id: String) -> bool:
+func _check_single_condition(cond: FKConditionUnit, current_root: Node, block_id: String, detail: Dictionary = {}) -> bool:
 	var target := str(cond.target_node)
 	var cnode: Node = _resolve_target(target, current_root)
 	if not cnode:
+		detail["explain"] = "%s: target missing (%s)" % [cond.condition_id, target]
 		return false
-	return registry.check_condition(
+	var ok: bool = registry.check_condition(
 		cond.condition_id, cnode, cond.inputs, cond.negated, current_root, block_id
 	)
+	if not ok:
+		var neg := " NOT" if cond.negated else ""
+		detail["explain"] = "%s%s @ %s inputs=%s" % [cond.condition_id, neg, target, str(cond.inputs)]
+	return ok
+
+## Debug step mode: F8 toggles, F9 continues one step.
+var debug_step_mode: bool = false
+var _debug_step_continue: bool = false
+
+func debug_wait_if_stepping(kind: String, msg: String) -> void:
+	var system = get_node_or_null(_path_to_sys)
+	if system and "debug_step_mode" in system:
+		debug_step_mode = system.debug_step_mode
+	if not debug_step_mode:
+		return
+	_debug(null, "step", "⏸ %s: %s  (F9 continue · F8 exit step)" % [kind, msg])
+	_debug_step_continue = false
+	if system:
+		system.debug_step_waiting = true
+		system.debug_step_label = "%s: %s" % [kind, msg]
+	while debug_step_mode and not _debug_step_continue:
+		if system and "debug_step_mode" in system:
+			debug_step_mode = system.debug_step_mode
+		if system and system.get("debug_step_request_continue"):
+			system.debug_step_request_continue = false
+			_debug_step_continue = true
+			break
+		await get_tree().process_frame
+	if system:
+		system.debug_step_waiting = false
 
 ## Execute a list of actions, handling branch chains via providers.
 ## Used by both _execute_block (top-level actions) and nested branches.

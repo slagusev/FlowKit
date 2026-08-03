@@ -45,6 +45,16 @@ func handle_input(event: InputEvent):
 		copied = _on_copy_input()
 	elif event.keycode == KEY_V and event.ctrl_pressed:
 		pasted = _on_paste_input()
+	elif event.keycode == KEY_D and event.ctrl_pressed and event.shift_pressed:
+		# Ctrl+Shift+D → disable selection
+		_editor.bulk_toggle_enabled(false)
+		viewport.set_input_as_handled()
+		return
+	elif event.keycode == KEY_E and event.ctrl_pressed and event.shift_pressed:
+		# Ctrl+Shift+E → enable selection
+		_editor.bulk_toggle_enabled(true)
+		viewport.set_input_as_handled()
+		return
 		
 	if deleted or copied or pasted:
 		viewport.set_input_as_handled()
@@ -123,14 +133,33 @@ func _is_editing_text() -> bool:
 	
 func _on_delete_key_pressed() -> bool:
 	var deleted: bool = true
-	
+	# Multi-select delete: reverse order so indices stay valid
+	if _editor.selection and _editor.selection.selected_rows.size() > 1:
+		_editor._push_undo_state()
+		var rows: Array = _editor.selection.selected_rows.duplicate()
+		rows.sort_custom(func(a, b): return a.get_index() > b.get_index())
+		for row in rows:
+			if is_instance_valid(row):
+				_editor.selected_row = row
+				_editor._delete_selected_row()
+		_editor.selection.clear()
+		_editor.selected_row = null
+		return true
+	if _editor.selection and _editor.selection.selected_items.size() > 1:
+		_editor._push_undo_state()
+		for it in _editor.selection.selected_items.duplicate():
+			if is_instance_valid(it):
+				_editor.selected_item = it
+				_editor._delete_selected_item()
+		_editor.selection.clear()
+		_editor.selected_item = null
+		return true
 	if valid_selected_item:
 		_editor._delete_selected_item()
 	elif valid_selected_row:
 		_editor._delete_selected_row()
 	else:
 		deleted = false
-		
 	return deleted
 		
 var valid_selected_item: bool:
@@ -142,6 +171,16 @@ var valid_selected_row: bool:
 		return _editor.valid_selected_row
 
 func _on_copy_input() -> bool:
+	# Multi-select bulk copy when possible
+	if _editor.selection and _editor.selection.selected_rows.size() > 1:
+		var events: Array = []
+		for row in _editor.selection.selected_rows:
+			if row and row.has_method("get_event_data"):
+				var ed = row.get_event_data()
+				if ed:
+					events.append(ed)
+		clipboard.copy_events(events)
+		return not events.is_empty()
 	if valid_selected_item:
 		_copy_selected_item()
 	elif valid_selected_row:
@@ -151,10 +190,13 @@ func _on_copy_input() -> bool:
 	return copied
 
 func _copy_selected_item():
-	if selected_item.has_method("get_block"):
-		clipboard.copy_action(selected_item.get_block())
-	elif selected_item.has_method("get_block"):
-		clipboard.copy_condition(selected_item.get_block())
+	if selected_item == null:
+		return
+	var block = selected_item.get_block() if selected_item.has_method("get_block") else null
+	if block is FKActionUnit:
+		clipboard.copy_action(block)
+	elif block is FKConditionUnit:
+		clipboard.copy_condition(block)
 
 func _copy_selected_row():
 	if selected_row.has_method("get_event_data"):

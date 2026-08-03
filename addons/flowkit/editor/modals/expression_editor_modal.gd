@@ -19,6 +19,11 @@ var param_values: Dictionary = {}
 @export var confirm_button: Button
 
 var selected_tree_node: Node = null
+## Host for type-aware param widgets (bool/int/float). Built under expression_input parent.
+var _typed_host: Control = null
+var _typed_editor: Control = null
+var _current_param_name: String = ""
+var _current_param_type: String = "Variant"
 
 func _enter_tree() -> void:
 	super._enter_tree()
@@ -135,26 +140,26 @@ func _add_node_children(node: Node, tree_item: TreeItem) -> void:
 
 
 func _show_current_parameter() -> void:
+	if action_inputs.is_empty():
+		return
 	var current_input = action_inputs[current_param_index]
-	var param_name: String; var param_type: String; var param_description: String;
-	var fk_action_input: FKActionInput
+	var param_name: String = "Unknown"
+	var param_type: String = "Variant"
+	var param_description: String = ""
 	if current_input is Dictionary:
 		var param_dict: Dictionary = action_inputs[current_param_index]
 		param_name = param_dict.get("name", "Unknown")
 		param_type = param_dict.get("type", "Variant")
 		param_description = param_dict.get("description", "")
-		
 	elif current_input is FKActionInput:
-		fk_action_input = current_input
-		param_name = fk_action_input.name
-		param_type = fk_action_input.type
-		param_description = fk_action_input.description
-		
-	
+		param_name = current_input.name
+		param_type = current_input.type
+		param_description = current_input.description
+	_current_param_name = param_name
+	_current_param_type = param_type
 	param_label.text = "%s (%s)" % [param_name, param_type]
-	# ^For some reason, this doesn't work when we assign the format to a var...
 	_update_desc(param_description)
-	_update_expr_input(param_name)
+	_update_expr_input(param_name, param_type)
 	_update_nav_buttons()
 	
 func _update_desc(param_description: String):
@@ -162,10 +167,57 @@ func _update_desc(param_description: String):
 	var is_there_desc_to_show: bool = param_description.length() > 0
 	description_panel.visible = is_there_desc_to_show
 
-func _update_expr_input(param_name: String):
-	expression_input.text = param_values.get(param_name, "")
+func _update_expr_input(param_name: String, param_type: String = "Variant") -> void:
+	var current_val = param_values.get(param_name, "")
+	expression_input.text = str(current_val) if current_val != null else ""
+	_rebuild_typed_widgets(param_type, current_val)
 	expression_input.grab_focus()
 	expression_input.caret_column = expression_input.text.length()
+	_live_validate(expression_input.text)
+
+func _ensure_typed_host() -> void:
+	if _typed_host and is_instance_valid(_typed_host):
+		return
+	if expression_input == null:
+		return
+	var parent = expression_input.get_parent()
+	if parent == null:
+		return
+	_typed_host = VBoxContainer.new()
+	_typed_host.name = "TypedParamHost"
+	_typed_host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(_typed_host)
+	# Place just after expression_input when possible
+	var idx := expression_input.get_index()
+	parent.move_child(_typed_host, mini(idx + 1, parent.get_child_count() - 1))
+
+func _rebuild_typed_widgets(param_type: String, current_val: Variant) -> void:
+	_ensure_typed_host()
+	if _typed_host == null:
+		return
+	for c in _typed_host.get_children():
+		c.queue_free()
+	_typed_editor = null
+	var kind := FKTypedParamWidgets.normalize_type(param_type)
+	# Always show expression line; for bool/int/float also offer typed controls above it
+	if kind in ["bool", "int", "float"]:
+		expression_input.visible = false
+		_typed_editor = FKTypedParamWidgets.build_editor(_typed_host, param_type, current_val, param_type)
+		# Mirror typed value into expression_input for existing insert/snippet path
+		var expr_le: LineEdit = _typed_editor.get_meta("expr", null)
+		if expr_le:
+			expr_le.text_changed.connect(func(t: String):
+				expression_input.text = t
+				_live_validate(t)
+			)
+	else:
+		expression_input.visible = true
+		_typed_host.visible = true
+		var hint := Label.new()
+		hint.text = "Type: %s — use expression or snippets below" % param_type
+		hint.add_theme_font_size_override("font_size", 11)
+		hint.add_theme_color_override("font_color", Color(0.65, 0.7, 0.75))
+		_typed_host.add_child(hint)
 
 func _update_nav_buttons():
 	prev_button.disabled = current_param_index == 0
@@ -204,6 +256,10 @@ func _add_system_snippets() -> void:
 	item_list.add_item("current")
 	item_list.add_item("current.global_position")
 	item_list.add_item("system.subsheet_params")
+	item_list.add_item("r_value")
+	item_list.add_item("system.subsheet_return")
+	item_list.add_item("system.picked")
+	item_list.add_item("system.picked_count")
 	# Live sheet variables from editor (if open)
 	_add_sheet_var_snippets()
 	_add_subsheet_param_snippets()
@@ -420,9 +476,16 @@ func _save_current_parameter() -> void:
 		param_name = param_data.get("name", "")
 	elif param_data is FKActionInput:
 		param_name = param_data.name
-		
+	if param_name.is_empty():
+		param_name = _current_param_name
+	var text := ""
+	if _typed_editor and is_instance_valid(_typed_editor):
+		text = FKTypedParamWidgets.get_value_text(_typed_editor)
+	elif expression_input:
+		text = expression_input.text
+	param_values[param_name] = text
 	if expression_input:
-		param_values[param_name] = expression_input.text
+		expression_input.text = text
 
 func _on_prev_button_pressed() -> void:
 	_save_current_parameter()

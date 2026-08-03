@@ -2,6 +2,39 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.1.0 — Roadmap A→G (typed inputs, multi-select, step debug, pick/return, nav/anim)
+
+### A — Expression typed inputs + behavior param UI
+- Expression modal: bool checkbox, int/float SpinBox, Expression toggle (`FKTypedParamWidgets`)
+- Behavior inspector: typed widgets for bool/int/float params
+
+### B — Multi-select + bulk
+- Ctrl/Cmd+click multi-select events and items (`FKSelectionManager`)
+- Bulk delete / multi-event copy
+- Ctrl+Shift+D disable · Ctrl+Shift+E enable
+- `enabled` flag on actions and conditions (runtime skip)
+
+### C — Debugger step / condition explain
+- Condition fail messages with id, target, inputs (`last_cond_fail`)
+- F8 step mode, F9 continue one action; overlay shows step state
+
+### D — Architecture + CI
+- `FKMainEditorBranchController`, selection manager, sheet filter helper (from 3.0)
+- GitHub Actions: **Godot 4.6.1**, hard timeouts on import/tests
+
+### E — Subsheet return + pick/families
+- **Set Subsheet Return** → `system.subsheet_return` / `r_value`
+- Call Subsheet **StoreAs** sheet var
+- **Pick Nodes** (group/class/filter) → `system.picked`
+- **For Each Picked** runs a subsheet per picked node
+
+### F — Targeted providers
+- NavigationAgent2D/3D: set target position, is navigation finished
+- AnimationTree: set state, set blend, on animation finished
+
+### G — Docs
+- README v3.1, website section, `demos/templates/README.md`
+
 ## 3.0.0 — Architecture debt + multi-behavior + subsheet params
 
 ### Architecture debt

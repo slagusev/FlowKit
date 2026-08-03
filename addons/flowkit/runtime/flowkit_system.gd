@@ -31,6 +31,9 @@ var current_node: Node = null  # alias
 
 ## Active Call Subsheet argument map (p_name in expressions). Cleared when subsheet ends.
 var subsheet_params: Dictionary = {}
+## Result of Pick Nodes (Array of Node).
+var picked: Array = []
+var picked_count: int = 0
 
 # Named callables registered by Define Function / usable via Call Function.
 # Key: function name (String) → Callable
@@ -40,6 +43,15 @@ var functions: Dictionary = {}
 const DEBUG_LOG_MAX := 80
 var debug_enabled: bool = true
 var debug_log: Array = []  # Array of {t, kind, msg}
+## Last condition-fail explanation string for overlay.
+var last_cond_fail: String = ""
+## Step debugger (F8 toggle, F9 step).
+var debug_step_mode: bool = false
+var debug_step_waiting: bool = false
+var debug_step_request_continue: bool = false
+var debug_step_label: String = ""
+## Last subsheet return value (r_ / system.subsheet_return).
+var subsheet_return: Variant = null
 
 var global_signals: FKGlobalSignals = FKGlobalSignals.new()
 

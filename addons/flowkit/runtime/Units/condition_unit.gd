@@ -5,6 +5,8 @@ class_name FKConditionUnit
 @export var condition_id: String = ""
 @export var target_node: NodePath
 @export var inputs: Dictionary = {}
+## When false, condition is skipped (treated as true / not evaluated).
+@export var enabled: bool = true
 @export var negated: bool = false
 ## If true, this condition is OR'd with the previous one(s) in the same OR group.
 ## Conditions with or_with_previous=false start a new AND group.
@@ -29,6 +31,7 @@ func serialize() -> Dictionary:
 		"condition_id": condition_id,
 		"target_node": str(target_node),
 		"inputs": inputs.duplicate(),
+		"enabled": enabled,
 		"negated": negated,
 		"or_with_previous": or_with_previous,
 	}
@@ -40,6 +43,7 @@ func deserialize(dict: Dictionary) -> void:
 	condition_id = dict.get("condition_id", "")
 	target_node = NodePath(dict.get("target_node", ""))
 	inputs = dict.get("inputs", {}).duplicate()
+	enabled = dict.get("enabled", true)
 	negated = dict.get("negated", false)
 	or_with_previous = dict.get("or_with_previous", false)
 
@@ -48,6 +52,7 @@ func duplicate_block() -> FKUnit:
 	result.condition_id = condition_id
 	result.target_node = str(target_node)
 	result.inputs = inputs.duplicate()
+	result.enabled = enabled
 	result.negated = negated
 	result.or_with_previous = or_with_previous
 	result.actions = [] as Array[FKActionUnit]

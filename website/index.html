@@ -63,7 +63,7 @@
             <span class="badge badge-blue">Godot 4.5+</span>
             <span class="badge badge-green">MIT License</span>
             <span class="badge badge-purple">Open Source Fork</span>
-            <span class="badge badge-blue">v3.0</span>
+            <span class="badge badge-blue">v3.1</span>
           </div>
           <div class="hero-cta">
             <a
@@ -192,35 +192,35 @@
 
     <section id="whats-new" class="section">
       <div class="container">
-        <h2>What's New in This Fork (v3.0)</h2>
+        <h2>What's New in This Fork (v3.1)</h2>
         <div class="changelog-grid">
           <div class="changelog-card">
-            <h3>Architecture debt</h3>
+            <h3>Editor power tools</h3>
             <ul>
-              <li>Picker modals load from <strong>FKRegistry</strong> (no disk scan)</li>
-              <li>Shared <code>FKProviderCompat</code> + sheet-filter helper</li>
-              <li>Multi-behavior meta (<code>flowkit_behaviors</code>) + legacy mirror</li>
-              <li>Group children normalize (nested + flag fix)</li>
-              <li>Typed <code>FKSheetVarDef</code> helper API</li>
+              <li>Typed expression inputs (bool / int / float + Expression mode)</li>
+              <li>Multi-select events &amp; items (Ctrl+click)</li>
+              <li>Bulk disable/enable (Ctrl+Shift+D/E)</li>
+              <li>Step debugger: F8 mode · F9 continue</li>
+              <li>Condition-fail explain in overlay</li>
             </ul>
           </div>
           <div class="changelog-card">
-            <h3>High priority features</h3>
+            <h3>Runtime &amp; data</h3>
             <ul>
-              <li>Apply / Remove Behavior actions; multi-behavior inspector</li>
-              <li>Subsheet parameters + <code>p_name</code> expressions</li>
-              <li>Await Signal (timeout) multi-frame action</li>
-              <li>Debug overlay: F4 hide · F6 pause · F7 clear</li>
-              <li>Richer expression snippets (lerpf, rand, params…)</li>
+              <li>Multi-behavior meta + Apply/Remove Behavior</li>
+              <li>Subsheet params <code>p_</code> and return <code>r_value</code></li>
+              <li>Pick Nodes + For Each Picked (<code>system.picked</code>)</li>
+              <li>Await Signal · mute enabled flags on actions/conditions</li>
+              <li>Registry-backed pickers (no disk scan)</li>
             </ul>
           </div>
           <div class="changelog-card">
             <h3>Providers &amp; quality</h3>
             <ul>
-              <li>100+ events, 30+ behaviors, large 2D/3D/UI action set</li>
-              <li>Emit Signal, Set Modulate, Look At 3D, Progress value…</li>
-              <li>Provider matrix + GUT CI</li>
-              <li>OR groups, favorites, sheet filter, subsheet editor</li>
+              <li>Nav2D/3D target + finished conditions</li>
+              <li>AnimationTree state / blend / finished</li>
+              <li>360+ providers · CI on Godot 4.6</li>
+              <li>Templates under <code>demos/templates/</code></li>
             </ul>
           </div>
         </div>

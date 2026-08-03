@@ -8,7 +8,7 @@ on:
 
 jobs:
   gut:
-    name: GUT unit tests (Godot 4.4+)
+    name: GUT unit tests (Godot 4.6)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,42 +18,50 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/godot-bin
-          key: godot-4.4.1-stable-linux
+          key: godot-4.6.1-stable-linux
 
-      - name: Download Godot 4.4.1
+      - name: Download Godot 4.6.1
         if: steps.cache-godot.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/godot-bin
           curl -fsSL -o /tmp/godot.zip \
-            "https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip"
+            "https://github.com/godotengine/godot-builds/releases/download/4.6.1-stable/Godot_v4.6.1-stable_linux.x86_64.zip"
           unzip -o /tmp/godot.zip -d ~/godot-bin
-          chmod +x ~/godot-bin/Godot_v4.4.1-stable_linux.x86_64
-          ln -sf ~/godot-bin/Godot_v4.4.1-stable_linux.x86_64 ~/godot-bin/godot
+          chmod +x ~/godot-bin/Godot_v4.6.1-stable_linux.x86_64
+          ln -sf ~/godot-bin/Godot_v4.6.1-stable_linux.x86_64 ~/godot-bin/godot
 
       - name: Link godot on PATH
         run: |
-          chmod +x ~/godot-bin/Godot_v4.4.1-stable_linux.x86_64 || true
-          ln -sf ~/godot-bin/Godot_v4.4.1-stable_linux.x86_64 ~/godot-bin/godot
+          chmod +x ~/godot-bin/Godot_v4.6.1-stable_linux.x86_64 || true
+          ln -sf ~/godot-bin/Godot_v4.6.1-stable_linux.x86_64 ~/godot-bin/godot
           echo "$HOME/godot-bin" >> $GITHUB_PATH
           ~/godot-bin/godot --version
 
+      # Import can hang on autoloads in some setups — hard timeout, fail the job
       - name: Import project
-        run: godot --headless --path . --import
-        timeout-minutes: 10
+        run: |
+          set -e
+          timeout 180 godot --headless --path . --import --quit-after 20 || {
+            echo "Import timed out or failed"
+            exit 1
+          }
+        timeout-minutes: 5
 
       - name: Run GUT unit tests
         run: |
           set -e
-          godot --headless --path . -s addons/gut/gut_cmdln.gd \
+          timeout 300 godot --headless --path . -s addons/gut/gut_cmdln.gd \
             -gdir=res://tests \
             -ginclude_subdirs \
             -gexit \
             -glog=1
-        timeout-minutes: 15
+        timeout-minutes: 8
 
       - name: Generate provider matrix
-        run: godot --headless --path . -s res://tools/generate_provider_matrix.gd
-        timeout-minutes: 5
+        run: |
+          set -e
+          timeout 120 godot --headless --path . -s res://tools/generate_provider_matrix.gd
+        timeout-minutes: 3
 
       - name: Upload provider matrix artifact
         if: always()
@@ -62,3 +70,6 @@ jobs:
           name: provider-matrix
           path: docs/PROVIDER_MATRIX.md
           if-no-files-found: ignore
+
+      - name: Fail if provider matrix missing after gen
+        run: test -f docs/PROVIDER_MATRIX.md

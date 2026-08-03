@@ -5,6 +5,8 @@ class_name FKActionUnit
 @export var action_id: String = ""
 @export var target_node: NodePath
 @export var inputs: Dictionary = {}
+## When false, skipped at runtime (still shown in editor, dimmed).
+@export var enabled: bool = true
 
 # Branch support
 @export var is_branch: bool = false
@@ -31,6 +33,7 @@ func serialize() -> Dictionary:
 		"action_id": action_id,
 		"target_node": str(target_node),
 		"inputs": inputs.duplicate(),
+		"enabled": enabled,
 		"is_branch": is_branch,
 		"branch_type": branch_type,
 		"branch_id": branch_id,
@@ -59,6 +62,7 @@ func deserialize(dict: Dictionary) -> void:
 	action_id = dict.get("action_id", "")
 	target_node = NodePath(dict.get("target_node", ""))
 	inputs = dict.get("inputs", {}).duplicate()
+	enabled = dict.get("enabled", true)
 	
 	is_branch = dict.get("is_branch", false)
 	branch_type = dict.get("branch_type", "")
@@ -92,6 +96,7 @@ func duplicate_block() -> FKUnit:
 	copy.action_id = action_id
 	copy.target_node = target_node
 	copy.inputs = inputs.duplicate(true)
+	copy.enabled = enabled
 	copy.is_branch = is_branch
 	copy.branch_type = branch_type
 	copy.branch_id = branch_id

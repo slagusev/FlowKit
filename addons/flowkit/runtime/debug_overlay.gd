@@ -59,8 +59,13 @@ func _process(_delta: float) -> void:
 		return
 	_panel.visible = true
 	var lines: PackedStringArray = [
-		"[b]FlowKit Debug[/b] [i]F4 hide · F6 pause · F7 clear[/i]"
+		"[b]FlowKit Debug[/b] [i]F4 hide · F6 pause · F7 clear · F8 step · F9 cont[/i]"
 	]
+	if system.debug_step_mode:
+		var wait_s := " WAITING" if system.debug_step_waiting else ""
+		lines.append("[color=#f5b041]STEP MODE%s[/color] %s" % [wait_s, str(system.debug_step_label)])
+	if "last_cond_fail" in system and str(system.last_cond_fail) != "":
+		lines.append("[color=#ec7063]last fail:[/color] " + str(system.last_cond_fail))
 	if not _filter.is_empty():
 		lines.append("[color=#888]filter:[/color] %s" % _filter)
 	var log_arr: Array = system.debug_log
@@ -112,4 +117,18 @@ func _unhandled_input(event: InputEvent) -> void:
 			var system = get_node_or_null("/root/FlowKitSystem")
 			if system and "debug_log" in system:
 				system.debug_log.clear()
+			if system and "last_cond_fail" in system:
+				system.last_cond_fail = ""
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_F8:
+			var system2 = get_node_or_null("/root/FlowKitSystem")
+			if system2 and "debug_step_mode" in system2:
+				system2.debug_step_mode = not system2.debug_step_mode
+				if not system2.debug_step_mode:
+					system2.debug_step_request_continue = true
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_F9:
+			var system3 = get_node_or_null("/root/FlowKitSystem")
+			if system3 and "debug_step_request_continue" in system3:
+				system3.debug_step_request_continue = true
 			get_viewport().set_input_as_handled()

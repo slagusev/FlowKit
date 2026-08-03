@@ -32,6 +32,9 @@ func _execute_actions(actions: Array, current_root: Node, block_id: String) -> v
 	var in_branch_chain: bool = false
 
 	for act in actions:
+		# Mute / disabled actions (and branches)
+		if "enabled" in act and not act.enabled:
+			continue
 		if act.is_branch:
 			var branch_id: String = registry.resolve_branch_id(act.branch_id, act.branch_type)
 			var provider = registry.get_branch_provider(branch_id)
@@ -84,7 +87,12 @@ func _execute_actions(actions: Array, current_root: Node, block_id: String) -> v
 			if not anode:
 				print("[FlowKit] Action target node not found: ", act.target_node)
 				continue
+			# Step debugger: pause before each action when enabled
+			if fk_engine and fk_engine.has_method("debug_wait_if_stepping"):
+				await fk_engine.debug_wait_if_stepping("action", "%s @ %s" % [act.action_id, target])
 			var provider: Variant = await registry.execute_action(act.action_id, anode, act.inputs, current_root, block_id)
+			if fk_engine and fk_engine.has_method("_debug"):
+				fk_engine._debug(current_root, "action", "Ran %s on %s" % [act.action_id, target])
 
 ## Determine whether a branch should execute, delegating to the branch provider.
 ## Handles both condition-type and evaluation-type branches.

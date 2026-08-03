@@ -32,8 +32,11 @@ var pending_target_item: FKUnitUi = null  # The specific condition/action item b
 var pending_target_group: Control = null  # The group to add content to (for event_in_group workflow)
 var pending_target_branch: FKBranchUnitUi = null  # The branch item for branch sub-action workflows
 var pending_branch_id: String = ""  # The branch provider ID for the current workflow
-var selected_row: FKUnitUi = null  # Currently selected event row
-var selected_item: FKUnitUi = null  # Currently selected condition/action item
+var selected_row: FKUnitUi = null  # Currently selected event row (primary)
+var selected_item: FKUnitUi = null  # Currently selected condition/action item (primary)
+## Multi-select manager (Ctrl+click additive).
+var selection := FKSelectionManager.new()
+var branch_controller := FKMainEditorBranchController.new()
 
 # Submodules local to us
 var sheet_state_tracker: FKSheetStateTracker
@@ -81,6 +84,7 @@ func _enter_tree() -> void:
 	unit_ui_factory = FKUnitUiFactory.new(editor_globals)
 	
 	input_manager.initialize(self)
+	branch_controller.setup(self)
 	
 	_modal_related_prep()
 	_ensure_sheet_filter_ui()
@@ -1247,18 +1251,14 @@ func _on_add_comment_button_pressed() -> void:
 	_show_content_state()
 
 func _on_row_selected(row: FKUnitUi) -> void:
-	"""Handle row selection with visual feedback."""
-	# Deselect previous item (condition/action)
-	_deselect_item()
-	
-	# Deselect previous row
-	if valid_selected_row:
-		selected_row.set_selected(false)
-	
-	# Select new row
-	selected_row = row
-	if selected_row:
-		selected_row.set_selected(true)
+	"""Handle row selection with visual feedback. Ctrl = multi-select."""
+	var additive := Input.is_key_pressed(KEY_CTRL) or Input.is_key_pressed(KEY_META)
+	if not additive:
+		_deselect_item()
+		selection.clear()
+	selection.select_row(row, additive)
+	selected_row = selection.primary_row
+	selected_item = null
 
 func _on_comment_selected(comment_node: FKCommentUi) -> void:
 	"""Handle comment block selection."""
@@ -1322,34 +1322,49 @@ func _insert_comment_relative_to(target_block: Node, offset: int) -> void:
 	_show_content_state()
 
 func _on_condition_selected_in_row(condition_node: FKConditionUnitUi) -> void:
-	"""Handle condition item selection."""
-	# Deselect previous row
-	if valid_selected_row and selected_row.has_method("set_selected"):
-		selected_row.set_selected(false)
+	"""Handle condition item selection. Ctrl = multi-select."""
+	var additive := Input.is_key_pressed(KEY_CTRL) or Input.is_key_pressed(KEY_META)
+	if not additive:
+		if valid_selected_row and selected_row.has_method("set_selected"):
+			selected_row.set_selected(false)
+		selected_row = null
+		selection.clear()
+	selection.select_item(condition_node, additive)
+	selected_item = selection.primary_item
 	selected_row = null
-	
-	# Deselect previous item
-	_deselect_item()
-	
-	# Select new item
-	selected_item = condition_node
-	if selected_item and selected_item.has_method("set_selected"):
-		selected_item.set_selected(true)
 
 func _on_action_selected_in_row(action_node: FKActionUnitUi) -> void:
-	"""Handle action item selection."""
-	# Deselect previous row
-	if valid_selected_row and selected_row.has_method("set_selected"):
-		selected_row.set_selected(false)
+	"""Handle action item selection. Ctrl = multi-select."""
+	var additive := Input.is_key_pressed(KEY_CTRL) or Input.is_key_pressed(KEY_META)
+	if not additive:
+		if valid_selected_row and selected_row.has_method("set_selected"):
+			selected_row.set_selected(false)
+		selected_row = null
+		selection.clear()
+	selection.select_item(action_node, additive)
+	selected_item = selection.primary_item
 	selected_row = null
-	
-	# Deselect previous item
-	_deselect_item()
-	
-	# Select new item
-	selected_item = action_node
-	if action_node:
-		action_node.set_selected(true)
+
+func bulk_toggle_enabled(enable: bool) -> void:
+	"""Enable/disable all multi-selected events, conditions, or actions."""
+	_push_undo_state()
+	for row in selection.selected_rows:
+		if row and row.has_method("get_event_data"):
+			var ed = row.get_event_data()
+			if ed and "enabled" in ed:
+				ed.enabled = enable
+				if row.has_method("update_display"):
+					row.update_display()
+	for it in selection.selected_items:
+		if it and it.has_method("get_block"):
+			var b = it.get_block()
+			if b and "enabled" in b:
+				b.enabled = enable
+				if it.has_method("update_display"):
+					it.update_display()
+	mark_sheet_dirty()
+	if auto_save_sheets:
+		_save_sheet()
 
 func _deselect_item() -> void:
 	"""Deselect current condition/action item."""
@@ -1359,6 +1374,7 @@ func _deselect_item() -> void:
 
 func _deselect_all() -> void:
 	"""Deselect all rows and items."""
+	selection.clear()
 	if valid_selected_row and selected_row is FKUnitUi:
 		selected_row.set_selected(false)
 	selected_row = null
@@ -2179,17 +2195,16 @@ func _finalize_branch_action_creation(inputs: Dictionary) -> void:
 
 ## Start the correct workflow for a branch provider (condition or evaluation).
 func _start_branch_workflow(branch_id: String, target_row) -> void:
+	# Delegates to FKMainEditorBranchController (architecture debt D).
+	pending_branch_id = branch_id
 	var branch_provider = registry.get_branch_provider(branch_id) if registry else null
 	if not branch_provider:
 		return
-
 	var input_type: String = branch_provider.get_input_type() if branch_provider.has_method("get_input_type") \
 	else "condition"
-
 	if input_type == "condition":
 		_start_add_workflow("branch_condition", target_row)
 	else:
-		# Evaluation type — skip node selector, go directly to expression modal
 		var branch_inputs_def: Array = branch_provider.get_inputs() if branch_provider.has_method("get_inputs") \
 		else []
 		pending_block_type = "branch_evaluation"

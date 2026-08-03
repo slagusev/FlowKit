@@ -247,41 +247,66 @@ func _show_behavior_params(provider: Variant, current_inputs: Dictionary) -> voi
 		_add_behavior_param_row(input_name, input_type, current_value)
 
 func _add_behavior_param_row(param_name: String, param_type: String, value: Variant) -> void:
-	var hbox: HBoxContainer = HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 4)
-	behavior_params_container.add_child(hbox)
-	hbox.set_meta("param_name", param_name)
-	hbox.set_meta("param_type", param_type)
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", 2)
+	behavior_params_container.add_child(row)
+	row.set_meta("param_name", param_name)
+	row.set_meta("param_type", param_type)
 	
 	var name_label: Label = Label.new()
-	name_label.text = param_name.capitalize().replace("_", " ")
-	name_label.custom_minimum_size = Vector2(100, 0)
-	hbox.add_child(name_label)
+	name_label.text = param_name.capitalize().replace("_", " ") + " (" + param_type + ")"
+	row.add_child(name_label)
 	
-	var value_edit: LineEdit = LineEdit.new()
-	value_edit.text = str(value)
-	value_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	value_edit.placeholder_text = param_type
-	value_edit.text_changed.connect(_on_behavior_param_text_changed.bind(hbox))
-	hbox.add_child(value_edit)
-
-func _on_behavior_param_text_changed(new_text: String, hbox: HBoxContainer) -> void:
-	var param_name: String = hbox.get_meta("param_name", "")
-	var param_type: String = hbox.get_meta("param_type", "String")
-	_on_behavior_param_changed(param_name, new_text, param_type)
+	var kind := FKTypedParamWidgets.normalize_type(param_type)
+	match kind:
+		"bool":
+			var cb := CheckBox.new()
+			cb.text = "enabled / true"
+			cb.button_pressed = bool(value) if value is bool else str(value).to_lower() in ["true", "1", "yes"]
+			cb.toggled.connect(func(on: bool):
+				_on_behavior_param_changed(param_name, "true" if on else "false", param_type)
+			)
+			row.add_child(cb)
+		"int", "float":
+			var spin := SpinBox.new()
+			spin.min_value = -999999.0
+			spin.max_value = 999999.0
+			spin.step = 1.0 if kind == "int" else 0.01
+			spin.allow_greater = true
+			spin.allow_lesser = true
+			spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if value is float or value is int:
+				spin.value = float(value)
+			elif str(value).is_valid_float():
+				spin.value = float(str(value))
+			spin.value_changed.connect(func(v: float):
+				var s := str(int(v)) if kind == "int" else str(v)
+				_on_behavior_param_changed(param_name, s, param_type)
+			)
+			row.add_child(spin)
+		_:
+			var value_edit: LineEdit = LineEdit.new()
+			value_edit.text = str(value) if value != null else ""
+			value_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			value_edit.placeholder_text = param_type
+			value_edit.text_changed.connect(func(t: String):
+				_on_behavior_param_changed(param_name, t, param_type)
+			)
+			row.add_child(value_edit)
 
 func _on_behavior_param_changed(param_name: String, new_value: String, param_type: String) -> void:
 	if not node or _editing_behavior_id.is_empty():
 		return
 	var list: Array = FKBehaviorMeta.get_behaviors(node)
+	var kind := FKTypedParamWidgets.normalize_type(param_type)
 	var typed_value: Variant = new_value
-	match param_type:
+	match kind:
 		"float":
 			typed_value = float(new_value) if new_value.is_valid_float() else 0.0
 		"int":
 			typed_value = int(new_value) if new_value.is_valid_int() else 0
 		"bool":
-			typed_value = new_value.to_lower() == "true"
+			typed_value = new_value.to_lower() in ["true", "1", "yes"]
 	for i in range(list.size()):
 		if str(list[i].get("id", "")) == _editing_behavior_id:
 			var inputs: Dictionary = {}

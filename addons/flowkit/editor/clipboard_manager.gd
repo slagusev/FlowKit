@@ -37,6 +37,14 @@ func copy_event(event_data: FKEventUnit) -> void:
 	_type = "event"
 	_event_data.append(_serialize_event_block(event_data))
 
+## Copy multiple event blocks (bulk multi-select).
+func copy_events(events: Array) -> void:
+	clear()
+	_type = "event"
+	for ed in events:
+		if ed is FKEventUnit:
+			_event_data.append(_serialize_event_block(ed))
+
 func copy_action(action_data: FKActionUnit) -> void:
 	clear()
 	_type = "action"
