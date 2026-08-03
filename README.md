@@ -15,24 +15,23 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.8.x — Object Mode + polish
+## What's new in v3.9 — Event sheet focus
 
 | Feature | How |
 |---------|-----|
-| **Object Mode** | Inspector packs, recipes, binds, rules |
-| **Demos** | `object_menu` → platformer / space |
-| **Export** | [docs/EXPORT.md](docs/EXPORT.md) checklist |
+| **Play highlight** | Run + F8 step → yellow event/action in sheet |
+| **Mute** | 🔊 on event · toolbar Mute/Enable · multi-select |
+| **Pickers** | Category counts `— Node (12) —` |
 
-### Play (no event sheet)
+### Debug while playing
 
-1. `addons/flowkit/demos/object_menu/object_menu.tscn`
-2. **Platformer Demo** or **Space Ship Demo**
+Keep the FlowKit panel open · breakpoint 🔴 · F8/F9 · row scrolls into view.
 
-Design: [docs/design/OBJECT_MODE.md](docs/design/OBJECT_MODE.md) · Migration: [docs/MIGRATION.md](docs/MIGRATION.md)
+## Object Mode (v3.4–3.8)
 
-### Packs (summary)
+Inspector packs/recipes · `demos/object_menu/` · [OBJECT_MODE.md](docs/design/OBJECT_MODE.md)
 
-Platformer · Top-down · Twin-stick · Health · Collectible · Bob · Enemy patrol · UI button · Camera follow · Rigid thrust · Typewriter
+Export: [docs/EXPORT.md](docs/EXPORT.md) · Migration: [docs/MIGRATION.md](docs/MIGRATION.md)
 
 ## Earlier — v3.4 Object Mode MVP
 
