@@ -2,6 +2,13 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.10.7 — Select Event list empty for Sprite2D
+
+### Fixed
+- **Select Event** could open empty for Sprite2D when provider list access failed in the modal.
+- Hardened `FKProviderCompat` node/type matching (`Node` / inheritance).
+- Reload registry if empty; clearer empty-state tips; single-click pick event.
+
 ## 3.10.6 — Select Node: Sprite2D / scene nodes selectable
 
 ### Fixed

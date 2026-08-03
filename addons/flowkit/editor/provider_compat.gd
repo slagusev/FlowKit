@@ -4,40 +4,48 @@ class_name FKProviderCompat
 
 ## True if node_class matches any entry in supported_types (exact, "Node", or inheritance).
 static func is_node_compatible(node_class: String, supported_types: Array) -> bool:
-	if supported_types.is_empty():
+	if node_class.is_empty() or supported_types.is_empty():
 		return false
-	if node_class in supported_types:
-		return true
-	# "Node" matches all node classes (legacy provider convention).
-	if "Node" in supported_types:
-		return true
+	# System pseudo-node
+	if node_class == "System":
+		for t in supported_types:
+			if str(t) == "System" or str(t) == "Node":
+				return true
+		return false
 	for supported_type in supported_types:
-		if typeof(supported_type) != TYPE_STRING:
+		var st := str(supported_type)
+		if st.is_empty():
 			continue
-		var st: String = supported_type
-		if st.is_empty() or st == "System":
-			continue
+		# Exact match
+		if st == node_class:
+			return true
+		# Convention: "Node" accepts every real scene node class.
+		if st == "Node":
+			return true
+		# Inheritance either direction (Sprite2D ↔ Node2D / CanvasItem).
 		if ClassDB.class_exists(node_class) and ClassDB.class_exists(st):
 			if ClassDB.is_parent_class(node_class, st):
+				return true
+			if ClassDB.is_parent_class(st, node_class):
 				return true
 	return false
 
 
-## Prefer live registry list; if empty and in editor, return empty (caller may fall back).
+## Live registry provider list for kind (action/condition/event/behavior/branch).
 static func providers_from_registry(registry: Variant, kind: String) -> Array:
 	if registry == null:
 		return []
-	# Prefer direct property access — `"prop" in object` is unreliable on some Node types.
+	# Direct fields — avoid Object.get() which can miss script vars in editor contexts.
 	match kind:
 		"action":
-			return registry.action_providers if registry.get("action_providers") != null else []
+			return registry.action_providers
 		"condition":
-			return registry.condition_providers if registry.get("condition_providers") != null else []
+			return registry.condition_providers
 		"event":
-			return registry.event_providers if registry.get("event_providers") != null else []
+			return registry.event_providers
 		"behavior":
-			return registry.behavior_providers if registry.get("behavior_providers") != null else []
+			return registry.behavior_providers
 		"branch":
-			return registry.branch_providers if registry.get("branch_providers") != null else []
+			return registry.branch_providers
 		_:
 			return []

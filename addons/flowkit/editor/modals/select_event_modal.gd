@@ -78,77 +78,77 @@ func _toggle_subs(on: bool):
 		
 	_is_subbed = on
 
-func _on_item_list_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_RIGHT or (event.button_index == MOUSE_BUTTON_LEFT and event.ctrl_pressed):
-			var idx := item_list.get_item_at_position(event.position, true)
-			if idx < 0:
-				return
-			var eid = item_list.get_item_metadata(idx)
-			if eid == null:
-				return
-			var ename := item_list.get_item_text(idx).replace("★ ", "")
-			if _favorites:
-				_favorites.toggle_event(str(eid), ename)
-				_update_list(search_box.text if search_box else "")
-				get_viewport().set_input_as_handled()
-	
 func _load_available_events() -> void:
 	"""Load events from FKRegistry (no per-modal disk scan)."""
 	available_events.clear()
 	if editor_globals and editor_globals.registry:
-		available_events = FKProviderCompat.providers_from_registry(editor_globals.registry, "event")
-	print("[FKSelectEventModal]: Loaded ", available_events.size(), " events (registry)")
+		var reg = editor_globals.registry
+		# Ensure providers exist (plugin should have loaded; belt-and-suspenders).
+		if reg.event_providers.is_empty() and reg.has_method("load_providers"):
+			reg.load_providers()
+		available_events = FKProviderCompat.providers_from_registry(reg, "event")
+	print("[FKSelectEventModal]: Loaded ", available_events.size(), " events for class=", selected_node_class)
 
 func populate_events(node_path: String, node_class: String) -> void:
 	"""Populate the list with events compatible with the selected node."""
 	selected_node_path = node_path
 	selected_node_class = node_class
+	if _favorites == null:
+		_favorites = FavoritesScript.new()
+	if _recent_items_manager == null:
+		_recent_items_manager = FKRecentItemsManagerUi.new()
 	_load_available_events()
-	
+
 	if not item_list:
 		return
-	
+
 	_all_items_cache.clear()
-	description_label.text = ""
-	
+	if description_label:
+		description_label.text = ""
+
 	# Filter events that support this node type
 	for event in available_events:
-		# Check if this is the new FKEvent pattern or old FKEventProvider pattern
-		if event.has_method("get_id"):
-			# New FKEvent pattern
-			var supported_types = event.get_supported_types()
-			if _is_node_compatible(node_class, supported_types):
-				var event_name = event.get_name()
-				var event_id = event.get_id()
-				var event_desc := ""
-				if event.has_method("get_description"):
-					event_desc = str(event.get_description())
-				
-				var cat := "General"
-				if supported_types.size() > 0:
-					cat = str(supported_types[0])
-				_all_items_cache.append({
-					"name": event_name,
-					"id": event_id,
-					"description": event_desc,
-					"category": cat,
-					"metadata": event_id
-				})
+		if event == null:
+			continue
+		if event.has_method("get_id") and event.has_method("get_supported_types"):
+			var supported_types: Array = []
+			var raw = event.get_supported_types()
+			for t in raw:
+				supported_types.append(str(t))
+			if not _is_node_compatible(node_class, supported_types):
+				continue
+			var event_name = event.get_name() if event.has_method("get_name") else str(event.get_id())
+			var event_id = str(event.get_id())
+			var event_desc := ""
+			if event.has_method("get_description"):
+				event_desc = str(event.get_description())
+			var cat := "General"
+			if supported_types.size() > 0:
+				cat = str(supported_types[0])
+			_all_items_cache.append({
+				"name": event_name,
+				"id": event_id,
+				"description": event_desc,
+				"category": cat,
+				"metadata": event_id
+			})
 		elif event.has_method("get_events_for"):
-			# Old FKEventProvider pattern
-			var supported_types = event.get_supported_types()
-			if _is_node_compatible(node_class, supported_types):
-				var events_list = event.get_events_for(null)
-				for event_data in events_list:
-					_all_items_cache.append({
-						"name": event_data["name"],
-						"id": event_data["id"],
-						"description": event_data.get("description", ""),
-						"category": str(supported_types[0]) if supported_types.size() > 0 else "General",
-						"metadata": event_data["id"]
-					})
-	
+			var supported_types2: Array = []
+			if event.has_method("get_supported_types"):
+				for t2 in event.get_supported_types():
+					supported_types2.append(str(t2))
+			if not _is_node_compatible(node_class, supported_types2):
+				continue
+			var events_list = event.get_events_for(null)
+			for event_data in events_list:
+				_all_items_cache.append({
+					"name": event_data["name"],
+					"id": event_data["id"],
+					"description": event_data.get("description", ""),
+					"category": str(supported_types2[0]) if supported_types2.size() > 0 else "General",
+					"metadata": event_data["id"]
+				})
+
 	_all_items_cache.sort_custom(func(a, b):
 		var af: bool = _favorites != null and _favorites.is_event_favorite(str(a.get("id", "")))
 		var bf: bool = _favorites != null and _favorites.is_event_favorite(str(b.get("id", "")))
@@ -165,6 +165,7 @@ func populate_events(node_path: String, node_class: String) -> void:
 	if search_box:
 		search_box.clear()
 		search_box.grab_focus()
+	print("[FKSelectEventModal]: Showing ", _all_items_cache.size(), " events for ", node_class, " @ ", node_path)
 
 func _category_counts() -> Dictionary:
 	var counts: Dictionary = {}
@@ -201,10 +202,18 @@ func _update_list(filter_text: String = "") -> void:
 	
 	if item_list.item_count == 0:
 		if filter_text.is_empty():
-			item_list.add_item("No events available for this node type")
+			item_list.add_item("No events for this node type")
+			item_list.set_item_disabled(0, true)
+			item_list.add_item("Tip: pick System for On Ready / On Process / On Key")
+			item_list.set_item_disabled(1, true)
+			item_list.add_item("Sprite2D: use Node events (On Ready) or System + Action on Sprite2D")
+			item_list.set_item_disabled(2, true)
+			if available_events.is_empty():
+				item_list.add_item("(Registry empty — regenerate providers / reload plugin)")
+				item_list.set_item_disabled(3, true)
 		else:
 			item_list.add_item("No events found")
-		item_list.set_item_disabled(0, true)
+			item_list.set_item_disabled(0, true)
 	elif not filter_text.is_empty() and item_list.item_count > 0 and not item_list.is_item_disabled(0):
 		item_list.select(0)
 		_on_item_selected(0)
@@ -215,41 +224,66 @@ func _on_search_text_changed(new_text: String) -> void:
 func _is_node_compatible(node_class: String, supported_types: Array) -> bool:
 	return FKProviderCompat.is_node_compatible(node_class, supported_types)
 
+func _on_item_list_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_RIGHT or (event.button_index == MOUSE_BUTTON_LEFT and event.ctrl_pressed):
+			var idx := item_list.get_item_at_position(event.position, true)
+			if idx < 0:
+				return
+			var eid = item_list.get_item_metadata(idx)
+			if eid == null:
+				return
+			var ename := item_list.get_item_text(idx).replace("★ ", "")
+			if _favorites:
+				_favorites.toggle_event(str(eid), ename)
+				_update_list(search_box.text if search_box else "")
+				get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT:
+			# Single click confirms (same as Select Node).
+			var idx2 := item_list.get_item_at_position(event.position, true)
+			if idx2 >= 0 and not item_list.is_item_disabled(idx2):
+				call_deferred("_confirm_event_index", idx2)
+				get_viewport().set_input_as_handled()
+
 func _on_item_activated(index: int) -> void:
-	"""Handle event selection."""
+	_confirm_event_index(index)
+
+func _confirm_event_index(index: int) -> void:
+	if index < 0 or index >= item_list.item_count:
+		return
 	if item_list.is_item_disabled(index):
 		return
-	
 	var event_id = item_list.get_item_metadata(index)
-	
-	# Find the event provider to get its inputs and name
+	if event_id == null:
+		return
 	var event_inputs: Array = []
 	var event_name = ""
 	for event in available_events:
-		if event.has_method("get_id") and event.get_id() == event_id:
+		if event and event.has_method("get_id") and str(event.get_id()) == str(event_id):
 			if event.has_method("get_inputs"):
 				event_inputs = event.get_inputs()
 			if event.has_method("get_name"):
 				event_name = event.get_name()
 			break
-	
-	print("[FKSelectEventModal]: Event selected: ", event_id, " for node: ", selected_node_path, " with inputs: ", event_inputs)
-	_recent_items_manager.add_recent_event(event_id, event_name, selected_node_class)
-	_modal_signals.event_selected.emit(selected_node_path, event_id, event_inputs)
+	print("[FKSelectEventModal]: Event selected: ", event_id, " for node: ", selected_node_path)
+	if _recent_items_manager:
+		_recent_items_manager.add_recent_event(str(event_id), event_name, selected_node_class)
+	_modal_signals.event_selected.emit(selected_node_path, str(event_id), event_inputs)
 	hide()
 
 func _on_item_selected(index: int) -> void:
 	"""Update description when item is selected."""
 	if item_list.is_item_disabled(index):
-		description_label.text = ""
+		if description_label:
+			description_label.text = ""
 		return
-	
 	var event_id = item_list.get_item_metadata(index)
-	
-	# Find the event and get description
+	if event_id == null:
+		return
 	for event in available_events:
-		if event.has_method("get_id") and event.get_id() == event_id:
-			description_label.text = event.get_description()
+		if event and event.has_method("get_id") and str(event.get_id()) == str(event_id):
+			if description_label and event.has_method("get_description"):
+				description_label.text = event.get_description()
 			break
 
 func _on_popup_hide() -> void:
