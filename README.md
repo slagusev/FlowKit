@@ -15,7 +15,13 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.10 — Templates, engine tests, editor split
+## What's new in v3.10.1 — Import fix
+
+| Fix | Detail |
+|-----|--------|
+| **Plugin import / LSP** | `Set Text` / `On Text Changed` no longer reference bare `FlowKitSystem` (parse errors on enable) |
+
+## Earlier — v3.10 Templates, engine tests, editor split
 
 | Feature | How |
 |---------|-----|

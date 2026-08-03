@@ -2,6 +2,11 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.10.1 — Plugin import fix
+
+### Fixed
+- **Parse errors on plugin import / LSP**: `set_text.gd` and `on_text_changed.gd` no longer use bare `FlowKitSystem` (autoload not visible at parse time). Resolve via `/root/FlowKitSystem` like other providers.
+
 ## 3.10.0 — Sheet templates, engine GUT paths, main_editor split
 
 ### Templates

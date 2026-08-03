@@ -108,6 +108,12 @@
 | `FKConditionGroups` | Engine condition OR groups extracted; same semantics as 3.9 |
 | History / paste controllers | Editor-only refactor; no sheet format change |
 
+## 3.10.0 → 3.10.1
+
+| Change | Action |
+|--------|--------|
+| Import parse fix | Update addon if you saw `FlowKitSystem not declared` on `set_text` / `on_text_changed` — no sheet migration |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.
