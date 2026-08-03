@@ -33,21 +33,27 @@ var _exec_actions: Callable
 ## Handles connecting and disconnecting the signals. ##
 func _toggle_subs_for(target_node: Node, on: bool):
 	var type := target_node.get_class()
-	var globals := FlowKitSystem.global_signals
 	var use_our_own_signal := !auto_signals_own_text_changes.has(type)
-	
+	# Resolve autoload via path (bare FlowKitSystem fails parse on plugin import / LSP).
+	var system = null
+	if target_node != null and is_instance_valid(target_node) and target_node.get_tree():
+		system = target_node.get_tree().root.get_node_or_null("/root/FlowKitSystem")
+	var globals = system.global_signals if system != null and ("global_signals" in system) else null
+
 	if on:
 		if use_our_own_signal:
+			if globals == null:
+				return
 			_callback = _global_text_change_response
 			globals.text_changed.connect(_callback)
 		else:
 			_callback = func(new_text): _exec_actions.call()
 			target_node.text_changed.connect(_callback)
 	else:
-		if globals.text_changed.is_connected(_callback):
+		if globals != null and globals.text_changed.is_connected(_callback):
 			globals.text_changed.disconnect(_callback)
-			
-		if target_node.has_signal("text_changed") && target_node.text_changed.is_connected(_callback):
+
+		if target_node.has_signal("text_changed") and target_node.text_changed.is_connected(_callback):
 			target_node.text_changed.disconnect(_callback)
 	
 static var auto_signals_own_text_changes: Array = ["LineEdit"]

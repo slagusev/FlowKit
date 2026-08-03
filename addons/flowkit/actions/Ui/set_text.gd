@@ -35,10 +35,16 @@ static func _emit_text_change_signal_as_needed(new_text: String, prev_text: Stri
 	# Not all text-having Nodes announce their text-changes by default, so...
 	var node_class = target_node.get_class()
 	var we_should_signal = !auto_signals_own_text_changes.has(node_class)
-	if we_should_signal:
-		var globals = FlowKitSystem.global_signals
-		globals.text_changed.emit(prev_text, new_text, target_node)
-	pass
+	if not we_should_signal:
+		return
+	# Autoload name is not a parse-time global when the plugin is first imported —
+	# resolve via tree like the rest of FlowKit providers.
+	if target_node == null or not is_instance_valid(target_node) or target_node.get_tree() == null:
+		return
+	var system = target_node.get_tree().root.get_node_or_null("/root/FlowKitSystem")
+	if system == null or not ("global_signals" in system):
+		return
+	system.global_signals.text_changed.emit(prev_text, new_text, target_node)
 
 static var auto_signals_own_text_changes: Array = ["LineEdit"]
 # ^Technically TextEdit does too, but only in response to user input or core engine code.
