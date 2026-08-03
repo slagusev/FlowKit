@@ -681,6 +681,7 @@ func _scan_object_nodes(scene_root: Node) -> void:
 func _scan_node_for_object(node: Node) -> void:
 	if FKObjectConfig.has_object_config(node):
 		var rules: Array = FKObjectConfig.get_local_rules(node)
+		var binds: Array = FKObjectConfig.get_binds(node)
 		var any_pack := false
 		var cfg := FKObjectConfig.get_config(node)
 		var packs: Dictionary = cfg.get("packs", {})
@@ -688,7 +689,7 @@ func _scan_node_for_object(node: Node) -> void:
 			if packs[k] is Dictionary and bool(packs[k].get("enabled", false)):
 				any_pack = true
 				break
-		if any_pack or not rules.is_empty():
+		if any_pack or not rules.is_empty() or not binds.is_empty():
 			if not active_object_nodes.has(node):
 				active_object_nodes.append(node)
 	for child in node.get_children():

@@ -51,6 +51,15 @@
 | Health pack | Sets `flowkit_variables` keys `hp`, `max_hp` |
 | Event sheets | Unchanged; optional for pack-only prototypes |
 
+## 3.4 → 3.5
+
+| Change | Action |
+|--------|--------|
+| Recipes | One-click buttons under Object Mode |
+| Collectible | Area2D + group filter `player` |
+| Binds | `var` + NodePath to ProgressBar/Label |
+| New behavior | `collectible_pickup` (export manifest regen) |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

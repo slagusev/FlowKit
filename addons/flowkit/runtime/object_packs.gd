@@ -71,6 +71,45 @@ static func all_packs() -> Array:
 					"params": {}
 				}
 			]
+		},
+		{
+			"id": "collectible",
+			"name": "Collectible",
+			"description": "Area2D: on player overlap add sheet score and free self.",
+			"supported_types": ["Area2D"],
+			"behavior_ids": ["collectible_pickup"],
+			"behavior_inputs": {
+				"collectible_pickup": {
+					"points": 1.0,
+					"score_var": "score",
+					"player_group": "player",
+					"destroy_self": true
+				}
+			},
+			"option_defs": [
+				{"name": "points", "type": "float", "default": 1.0, "maps_to": "collectible_pickup.points"},
+				{"name": "score_var", "type": "string", "default": "score", "maps_to": "collectible_pickup.score_var"},
+				{"name": "player_group", "type": "string", "default": "player", "maps_to": "collectible_pickup.player_group"},
+				{"name": "destroy_self", "type": "bool", "default": true, "maps_to": "collectible_pickup.destroy_self"}
+			],
+			"variables": {"points": 1.0},
+			"default_rules": []
+		},
+		{
+			"id": "float_bob",
+			"name": "Float / Bob",
+			"description": "Gentle vertical bob (Node2D).",
+			"supported_types": ["Node2D"],
+			"behavior_ids": ["bob_up_down"],
+			"behavior_inputs": {
+				"bob_up_down": {"amplitude": 8.0, "frequency": 2.0}
+			},
+			"option_defs": [
+				{"name": "amplitude", "type": "float", "default": 8.0, "maps_to": "bob_up_down.amplitude"},
+				{"name": "frequency", "type": "float", "default": 2.0, "maps_to": "bob_up_down.frequency"}
+			],
+			"variables": {},
+			"default_rules": []
 		}
 	]
 
@@ -126,6 +165,10 @@ static func apply_pack(node: Node, pack_id: String, options: Dictionary = {}) ->
 		var max_hp := float(opts.get("max_hp", 100.0))
 		vars["max_hp"] = max_hp
 		vars["hp"] = max_hp
+	if pack_id == "collectible":
+		vars["points"] = float(opts.get("points", 1.0))
+		if node is Area2D:
+			(node as Area2D).monitoring = true
 	if not vars.is_empty():
 		node.set_meta("flowkit_variables", vars)
 	

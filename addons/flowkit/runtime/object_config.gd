@@ -19,6 +19,8 @@ static func get_config(node: Node) -> Dictionary:
 		d["packs"] = {}
 	if not d.has("local_rules") or not (d["local_rules"] is Array):
 		d["local_rules"] = []
+	if not d.has("binds") or not (d["binds"] is Array):
+		d["binds"] = []
 	return d
 
 
@@ -31,11 +33,13 @@ static func set_config(node: Node, config: Dictionary) -> void:
 		d["packs"] = {}
 	if not d.has("local_rules"):
 		d["local_rules"] = []
+	if not d.has("binds"):
+		d["binds"] = []
 	node.set_meta(META_KEY, d)
 
 
 static func _default() -> Dictionary:
-	return {"version": 1, "packs": {}, "local_rules": [], "quick_notes": ""}
+	return {"version": 1, "packs": {}, "local_rules": [], "binds": [], "quick_notes": ""}
 
 
 static func is_pack_enabled(node: Node, pack_id: String) -> bool:
@@ -85,6 +89,30 @@ static func set_local_rules(node: Node, rules: Array) -> void:
 	var cfg := get_config(node)
 	cfg["local_rules"] = rules
 	set_config(node, cfg)
+
+
+static func get_binds(node: Node) -> Array:
+	var cfg := get_config(node)
+	var b = cfg.get("binds", [])
+	return b if b is Array else []
+
+
+static func set_binds(node: Node, binds: Array) -> void:
+	var cfg := get_config(node)
+	cfg["binds"] = binds
+	set_config(node, cfg)
+
+
+static func add_bind(node: Node, var_name: String, path: String, max_var: String = "max_hp") -> void:
+	var binds: Array = get_binds(node)
+	# Replace same path
+	var next: Array = []
+	for b in binds:
+		if b is Dictionary and str(b.get("path", "")) == path:
+			continue
+		next.append(b)
+	next.append({"enabled": true, "var": var_name, "path": path, "max_var": max_var, "as_int": true})
+	set_binds(node, next)
 
 
 static func get_runtime(node: Node) -> Dictionary:

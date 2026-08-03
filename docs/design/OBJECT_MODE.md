@@ -120,6 +120,15 @@ Each pack declares:
 | `health` | Node | vars `hp`, `max_hp`; optional destroy; local rule hook |
 | `collectible` | Area2D | vars `points`; on body entered → add sheet score (rule) |
 
+### Phase 2 packs / recipes (v3.5)
+
+| id | Notes |
+|----|--------|
+| `collectible` | Area2D + `collectible_pickup` behavior |
+| `float_bob` | Node2D bob |
+| Recipes | platformer_player, topdown_player, coin, damage_zone |
+| Binds | `flowkit_object.binds` → ProgressBar / Label |
+
 ### Future packs
 
 Enemy patrol, twin-stick, camera follow, UI button→scene, rigid thrust, typewriter UI.

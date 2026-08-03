@@ -15,19 +15,33 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.4 — Object Mode
+## What's new in v3.5 — Object Mode phase 2
 
-Build gameplay **without the event sheet**: select a node → Inspector → **Object Mode** packs.
+| Feature | How |
+|---------|-----|
+| **Recipes** | One-click: Platformer Player, Top-Down Player, Coin, Damage Zone |
+| **Collectible** | Area2D pack → +sheet score, free self |
+| **Property binds** | `hp` → ProgressBar path (live) |
+| **More rules** | var thresholds, damage zone overlap, hide/show |
+
+### Object Mode quick start
+
+1. Select **CharacterBody2D** → Inspector → **Object Mode**
+2. Click **Make Platformer Player** (or enable packs manually)
+3. Select **Area2D** → **Make Coin / Collectible** (player must be in group `player`)
+4. Optional: bind `hp` → `UI/HPBar` for a ProgressBar
+
+Design: [docs/design/OBJECT_MODE.md](docs/design/OBJECT_MODE.md)
+
+Sheets remain for complex logic; packs and sheets share the same runtime.
+
+## Earlier — v3.4 Object Mode MVP
 
 | Pack | Effect |
 |------|--------|
 | **Platformer 2D** | CharacterBody2D movement + jump |
 | **Top-Down 2D** | 4/8-dir movement |
 | **Health** | `n_hp` / `n_max_hp`; optional destroy at 0 |
-
-Design: [docs/design/OBJECT_MODE.md](docs/design/OBJECT_MODE.md)
-
-Sheets remain for complex logic; packs and sheets share the same runtime.
 
 ## Earlier — v3.3
 

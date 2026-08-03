@@ -2,6 +2,25 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.5.0 — Object Mode phase 2 (collectible, recipes, binds)
+
+### Packs & recipes
+- **Collectible** pack (Area2D) + `collectible_pickup` behavior (score sheet var, free self)
+- **Float / Bob** pack (Node2D)
+- **Recipes**: Make Platformer Player, Top-Down Player, Coin, Damage Zone
+- One-click recipes add groups (`player` / `collectible` / `hazard`)
+
+### Property binds
+- Bind instance var → ProgressBar or Label path (`flowkit_object.binds`)
+- Live update each frame in Object Mode rules tick
+
+### Local rules expanded
+- When: `var_lte` / `var_gte` / `var_eq` / `always` / `body_in_group_player` / `on_ready_once`
+- Then: `hide` / `show` / `add_sheet_var` / `set_var` / `damage_self` / `damage_overlapping_player`
+
+### Docs / tests
+- Design doc phase 2 notes; unit tests for collectible, recipe, bind
+
 ## 3.4.0 — Object Mode MVP (packs without event sheet)
 
 ### Design

@@ -51,3 +51,36 @@ func test_hp_rule_queue_free_fires_once():
 	FKObjectRules.process_node(n, null)
 	var rt := FKObjectConfig.get_runtime(n)
 	assert_true(bool(rt.get("fired", {}).get("t", false)))
+
+func test_collectible_pack_behavior():
+	var a := Area2D.new()
+	add_child_autofree(a)
+	FKObjectPacks.apply_pack(a, "collectible", {"points": 5.0})
+	assert_true(FKObjectConfig.is_pack_enabled(a, "collectible"))
+	var list := FKBehaviorMeta.get_behaviors(a)
+	var found := false
+	for b in list:
+		if str(b.get("id", "")) == "collectible_pickup":
+			found = true
+			assert_eq(float(b.get("inputs", {}).get("points", 0)), 5.0)
+	assert_true(found)
+
+func test_recipe_platformer_player():
+	var body := CharacterBody2D.new()
+	add_child_autofree(body)
+	FKObjectRecipes.apply_recipe(body, "platformer_player")
+	assert_true(body.is_in_group("player"))
+	assert_true(FKObjectConfig.is_pack_enabled(body, "platformer_2d"))
+	assert_true(FKObjectConfig.is_pack_enabled(body, "health"))
+
+func test_property_bind_updates_range():
+	var n := Node.new()
+	var bar := ProgressBar.new()
+	bar.name = "HPBar"
+	n.add_child(bar)
+	add_child_autofree(n)
+	n.set_meta("flowkit_variables", {"hp": 40.0, "max_hp": 100.0})
+	FKObjectConfig.add_bind(n, "hp", "HPBar", "max_hp")
+	FKObjectRules.process_node(n, null)
+	assert_eq(bar.value, 40.0)
+	assert_eq(bar.max_value, 100.0)
