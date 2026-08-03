@@ -8,12 +8,19 @@ signal generate_providers
 signal generate_manifest
 signal undo_requested
 signal redo_requested
+signal export_json_requested
+signal import_json_requested
+
 func _on_file_id_pressed(id: int) -> void:
 	match id:
 		0: # New Event Sheet
 			emit_signal("new_sheet")
 		1: # Save Event Sheet
 			emit_signal("save_sheet")
+		2: # Export JSON
+			emit_signal("export_json_requested")
+		3: # Import JSON
+			emit_signal("import_json_requested")
 
 func _on_edit_id_pressed(id: int) -> void:
 	match id:

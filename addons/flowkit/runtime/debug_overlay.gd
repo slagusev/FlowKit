@@ -64,8 +64,26 @@ func _process(_delta: float) -> void:
 	if system.debug_step_mode:
 		var wait_s := " WAITING" if system.debug_step_waiting else ""
 		lines.append("[color=#f5b041]STEP MODE%s[/color] %s" % [wait_s, str(system.debug_step_label)])
+	if "debug_active_event_id" in system and str(system.debug_active_event_id) != "":
+		lines.append("[color=#f7dc6f]▶ %s[/color] action=%s block=%s" % [
+			str(system.debug_active_event_id),
+			str(system.debug_active_action_id),
+			str(system.debug_active_block_id)
+		])
 	if "last_cond_fail" in system and str(system.last_cond_fail) != "":
 		lines.append("[color=#ec7063]last fail:[/color] " + str(system.last_cond_fail))
+	# Top profiler entries
+	if "profile_stats" in system and system.profile_stats is Dictionary and not system.profile_stats.is_empty():
+		var entries: Array = []
+		for k in system.profile_stats.keys():
+			var st: Dictionary = system.profile_stats[k]
+			entries.append({"id": k, "us": int(st.get("last_us", 0)), "n": int(st.get("count", 0))})
+		entries.sort_custom(func(a, b): return a["us"] > b["us"])
+		var top := mini(3, entries.size())
+		var bits: PackedStringArray = []
+		for i in range(top):
+			bits.append("%s %dus×%d" % [entries[i]["id"], entries[i]["us"], entries[i]["n"]])
+		lines.append("[color=#888]perf:[/color] " + ", ".join(bits))
 	if not _filter.is_empty():
 		lines.append("[color=#888]filter:[/color] %s" % _filter)
 	var log_arr: Array = system.debug_log

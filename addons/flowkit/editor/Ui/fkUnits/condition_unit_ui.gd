@@ -63,13 +63,20 @@ func _update_label_text():
 	# OR prefix shown only via separator in event row; keep compact "or · " badge
 	var or_prefix := "or · " if _cond_block.or_with_previous else ""
 
-	label.text = "%s%s%s%s" % [or_prefix, neg_prefix, display_name, params_text]
-	if _cond_block.or_with_previous:
+	var mute := "" if _cond_block.enabled else " [OFF]"
+	label.text = "%s%s%s%s%s" % [or_prefix, neg_prefix, display_name, params_text, mute]
+	if not _cond_block.enabled:
+		label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+		modulate = Color(0.6, 0.6, 0.6)
+	elif _cond_block.or_with_previous:
 		label.add_theme_color_override("font_color", Color(0.55, 0.88, 1.0))
+		modulate = Color.WHITE
 	elif _cond_block.negated:
 		label.add_theme_color_override("font_color", Color(1.0, 0.55, 0.5))
+		modulate = Color.WHITE
 	else:
 		label.remove_theme_color_override("font_color")
+		modulate = Color.WHITE
 			
 ## If none is found from the registry, this returns the condition's id
 func _get_display_name_from_registry() -> String:
@@ -130,10 +137,14 @@ func show_context_menu(global_pos: Vector2) -> void:
 	if c:
 		# Ensure OR menu item exists (for older .tscn without it)
 		_ensure_or_menu_item()
+		_ensure_enabled_menu_item()
 		context_menu.set_item_checked(2, c.negated)
 		var or_idx := context_menu.get_item_index(3)
 		if or_idx >= 0:
 			context_menu.set_item_checked(or_idx, c.or_with_previous)
+		var en_idx := context_menu.get_item_index(4)
+		if en_idx >= 0:
+			context_menu.set_item_checked(en_idx, c.enabled)
 
 	context_menu.position = global_pos
 	context_menu.popup()
@@ -149,12 +160,25 @@ func _ensure_or_menu_item() -> void:
 	if not has_or:
 		context_menu.add_check_item("OR with previous", 3)
 
+func _ensure_enabled_menu_item() -> void:
+	if not context_menu:
+		return
+	for i in range(context_menu.item_count):
+		if context_menu.get_item_id(i) == 4:
+			return
+	context_menu.add_check_item("Enabled", 4)
+
 func _on_context_menu_id_pressed(id: int) -> void:
 	match id:
 		0: edit_requested.emit(self)
 		1: delete_requested.emit(self)
 		2: negate_requested.emit(self)
 		3: or_toggle_requested.emit(self)
+		4:
+			var c := get_block()
+			if c:
+				c.enabled = not c.enabled
+				update_display()
 
 signal negate_requested(node: FKUnitUi)
 signal or_toggle_requested(node: FKUnitUi)

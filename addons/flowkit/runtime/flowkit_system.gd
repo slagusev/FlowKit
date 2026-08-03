@@ -50,8 +50,16 @@ var debug_step_mode: bool = false
 var debug_step_waiting: bool = false
 var debug_step_request_continue: bool = false
 var debug_step_label: String = ""
+## Highlight targets for editor / overlay while stepping.
+var debug_active_block_id: String = ""
+var debug_active_event_id: String = ""
+var debug_active_action_id: String = ""
 ## Last subsheet return value (r_ / system.subsheet_return).
 var subsheet_return: Variant = null
+## Named pick families: name -> {group, class, filter}
+var families: Dictionary = {}
+## Simple profiler: action_id -> {count, total_us, last_us}
+var profile_stats: Dictionary = {}
 
 var global_signals: FKGlobalSignals = FKGlobalSignals.new()
 

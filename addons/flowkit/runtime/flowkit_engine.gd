@@ -377,10 +377,32 @@ func _execute_block(block: FKEventUnit, current_root: Node, sheet_uid: int = 0) 
 	if block.trigger_once:
 		block._runtime_triggered = true
 	
+	_set_debug_active(block.block_id, block.event_id, "")
 	_debug(current_root, "event", "Fired %s on %s" % [block.event_id, str(block.target_node)])
+	
+	# Breakpoint: force step mode before actions
+	if block.breakpoint_enabled:
+		var system = get_node_or_null(_path_to_sys)
+		if system and "debug_step_mode" in system:
+			system.debug_step_mode = true
+		await debug_wait_if_stepping("breakpoint", "%s (%s)" % [block.event_id, block.block_id])
 	
 	# Execute all actions (with branch support, including nested branches)
 	await _execute_actions_list(block.actions, current_root, block.block_id)
+	_set_debug_active("", "", "")
+
+func _set_debug_active(block_id: String, event_id: String, action_id: String) -> void:
+	var system = get_node_or_null(_path_to_sys)
+	if system == null:
+		return
+	if "debug_active_block_id" in system:
+		system.debug_active_block_id = block_id
+	if "debug_active_event_id" in system:
+		system.debug_active_event_id = event_id
+	if "debug_active_action_id" in system:
+		system.debug_active_action_id = action_id
+	if system.has_method("debug_push") and not block_id.is_empty():
+		system.debug_push("highlight", "▶ %s · %s" % [event_id, action_id if not action_id.is_empty() else "event"])
 
 func _debug(from: Node, kind: String, msg: String) -> void:
 	var system = get_node_or_null(_path_to_sys)
@@ -451,6 +473,16 @@ func _check_single_condition(cond: FKConditionUnit, current_root: Node, block_id
 ## Debug step mode: F8 toggles, F9 continues one step.
 var debug_step_mode: bool = false
 var _debug_step_continue: bool = false
+
+func record_profile(action_id: String, elapsed_us: int) -> void:
+	var system = get_node_or_null(_path_to_sys)
+	if system == null or not ("profile_stats" in system):
+		return
+	var st: Dictionary = system.profile_stats.get(action_id, {"count": 0, "total_us": 0, "last_us": 0})
+	st["count"] = int(st.get("count", 0)) + 1
+	st["total_us"] = int(st.get("total_us", 0)) + elapsed_us
+	st["last_us"] = elapsed_us
+	system.profile_stats[action_id] = st
 
 func debug_wait_if_stepping(kind: String, msg: String) -> void:
 	var system = get_node_or_null(_path_to_sys)

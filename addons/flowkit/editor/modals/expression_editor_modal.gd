@@ -53,6 +53,48 @@ var _validate_label: Label
 
 func _on_expression_text_changed(new_text: String) -> void:
 	_live_validate(new_text)
+	_update_autocomplete(new_text)
+
+var _ac_popup: PopupMenu = null
+
+func _update_autocomplete(text: String) -> void:
+	if expression_input == null:
+		return
+	var suggestions := FKExpressionAutocomplete.suggestions_for(text, editor_globals, selected_tree_node)
+	if suggestions.is_empty():
+		if _ac_popup:
+			_ac_popup.hide()
+		return
+	if _ac_popup == null:
+		_ac_popup = PopupMenu.new()
+		_ac_popup.id_pressed.connect(_on_autocomplete_chosen)
+		add_child(_ac_popup)
+	_ac_popup.clear()
+	var max_n := mini(16, suggestions.size())
+	for i in range(max_n):
+		_ac_popup.add_item(suggestions[i], i)
+		_ac_popup.set_item_metadata(i, suggestions[i])
+	# Position under expression field
+	var gp := expression_input.get_global_position()
+	_ac_popup.position = Vector2i(int(gp.x), int(gp.y + expression_input.size.y))
+	_ac_popup.popup()
+
+func _on_autocomplete_chosen(id: int) -> void:
+	if _ac_popup == null:
+		return
+	var suggestion = _ac_popup.get_item_metadata(id)
+	if suggestion == null:
+		return
+	var s := str(suggestion)
+	var cur := expression_input.text
+	var token := FKExpressionAutocomplete._last_token(cur)
+	if token.is_empty():
+		expression_input.text = cur + s
+	else:
+		expression_input.text = cur.substr(0, cur.length() - token.length()) + s
+	expression_input.caret_column = expression_input.text.length()
+	_live_validate(expression_input.text)
+	_ac_popup.hide()
 
 func _live_validate(text: String) -> void:
 	if _validate_label == null and expression_input:

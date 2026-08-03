@@ -1126,6 +1126,41 @@ func _on_row_before_contents_changed(n):
 func _on_new_sheet() -> void:
 	_new_sheet()
 
+func _on_export_json() -> void:
+	if current_scene_uid == 0 or blocks_container == null:
+		push_warning("[FlowKit] Export JSON: no scene/sheet open")
+		return
+	var units := blocks_container.units
+	var sheet := FKEventSheet.from_units(units)
+	sheet.sheet_var_defs = editor_globals.sheet_var_defs.duplicate(true)
+	sheet.subsheets = []
+	for s in editor_globals.sheet_subsheets:
+		if s != null:
+			sheet.subsheets.append(s)
+	var path := "res://flowkit/event_sheets/export_%s.json" % (current_scene_name if not current_scene_name.is_empty() else str(current_scene_uid))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://flowkit/event_sheets"))
+	var err := FKSheetJsonIO.write_file(path, sheet)
+	print("[FlowKit] Exported sheet JSON → %s (err=%s)" % [path, err])
+	if editor_interface:
+		editor_interface.get_resource_filesystem().scan()
+
+func _on_import_json() -> void:
+	var path := "res://flowkit/event_sheets/export_%s.json" % (current_scene_name if not current_scene_name.is_empty() else str(current_scene_uid))
+	if not FileAccess.file_exists(path):
+		# Fallback: any export_*.json
+		push_warning("[FlowKit] Import JSON: file not found at %s — place export_*.json under res://flowkit/event_sheets/" % path)
+		return
+	var sheet := FKSheetJsonIO.read_file(path)
+	if sheet == null:
+		push_warning("[FlowKit] Import JSON failed to parse: " + path)
+		return
+	_push_undo_state()
+	_populate_from_sheet(sheet)
+	mark_sheet_dirty()
+	if auto_save_sheets:
+		_save_sheet()
+	print("[FlowKit] Imported sheet JSON from ", path)
+
 func _on_generate_providers() -> void:
 	if not generator:
 		print("[FKMainEditor]: Generator not available")

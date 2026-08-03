@@ -137,6 +137,8 @@ func show_context_menu(global_pos: Vector2) -> void:
 	context_menu.set_item_checked(context_menu.get_item_index(MenuChoices.TOGGLE_ONCE), e.trigger_once if e else false)
 	context_menu.add_check_item("Once While True", MenuChoices.TOGGLE_ONCE_WHILE)
 	context_menu.set_item_checked(context_menu.get_item_index(MenuChoices.TOGGLE_ONCE_WHILE), e.once_while_true if e else false)
+	context_menu.add_check_item("Breakpoint 🔴", MenuChoices.TOGGLE_BREAKPOINT)
+	context_menu.set_item_checked(context_menu.get_item_index(MenuChoices.TOGGLE_BREAKPOINT), e.breakpoint_enabled if e else false)
 	context_menu.add_separator()
 	context_menu.add_item("Delete Event", MenuChoices.DELETE_EVENT)
 
@@ -153,6 +155,7 @@ enum MenuChoices {
 	TOGGLE_ENABLED = 5,
 	TOGGLE_ONCE = 6,
 	TOGGLE_ONCE_WHILE = 7,
+	TOGGLE_BREAKPOINT = 8,
 }
 
 func _on_context_menu_id_pressed(choice: int) -> void:
@@ -173,6 +176,8 @@ func _on_context_menu_id_pressed(choice: int) -> void:
 			_toggle_event_flag("trigger_once")
 		MenuChoices.TOGGLE_ONCE_WHILE:
 			_toggle_event_flag("once_while_true")
+		MenuChoices.TOGGLE_BREAKPOINT:
+			_toggle_event_flag("breakpoint_enabled")
 
 func _toggle_event_flag(flag_name: String) -> void:
 	var e := _get_event()
@@ -356,10 +361,32 @@ func _update_event_header() -> void:
 		flags += " [once]"
 	if e.once_while_true:
 		flags += " [edge]"
+	if e.breakpoint_enabled:
+		flags += " 🔴"
 
 	event_header_label.text = (_header_label_format % [display_name, node_name, params_text]) + flags
 	if event_header_label:
-		event_header_label.modulate = Color(0.55, 0.55, 0.55) if not e.enabled else Color.WHITE
+		if not e.enabled:
+			event_header_label.modulate = Color(0.55, 0.55, 0.55)
+		elif e.breakpoint_enabled:
+			event_header_label.modulate = Color(1.0, 0.55, 0.45)
+		else:
+			event_header_label.modulate = Color.WHITE
+	# Runtime step highlight (when playing with debugger)
+	_apply_debug_highlight()
+
+func _apply_debug_highlight() -> void:
+	var e := _get_event()
+	if e == null or panel == null:
+		return
+	var system = get_tree().root.get_node_or_null("/root/FlowKitSystem") if get_tree() else null
+	var active_id := ""
+	if system and "debug_active_block_id" in system:
+		active_id = str(system.debug_active_block_id)
+	if not active_id.is_empty() and e.block_id == active_id:
+		modulate = Color(1.15, 1.05, 0.55)
+	else:
+		modulate = Color.WHITE
 
 func _get_event() -> FKEventUnit:
 	return get_block() as FKEventUnit

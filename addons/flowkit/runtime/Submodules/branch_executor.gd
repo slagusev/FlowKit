@@ -88,9 +88,14 @@ func _execute_actions(actions: Array, current_root: Node, block_id: String) -> v
 				print("[FlowKit] Action target node not found: ", act.target_node)
 				continue
 			# Step debugger: pause before each action when enabled
+			if fk_engine and fk_engine.has_method("_set_debug_active"):
+				fk_engine._set_debug_active(block_id, "", act.action_id)
 			if fk_engine and fk_engine.has_method("debug_wait_if_stepping"):
 				await fk_engine.debug_wait_if_stepping("action", "%s @ %s" % [act.action_id, target])
+			var t0 := Time.get_ticks_usec()
 			var provider: Variant = await registry.execute_action(act.action_id, anode, act.inputs, current_root, block_id)
+			if fk_engine and fk_engine.has_method("record_profile"):
+				fk_engine.record_profile(act.action_id, Time.get_ticks_usec() - t0)
 			if fk_engine and fk_engine.has_method("_debug"):
 				fk_engine._debug(current_root, "action", "Ran %s on %s" % [act.action_id, target])
 

@@ -63,7 +63,90 @@ func _build_ui() -> void:
 	margin.add_child(inner_vbox)
 	
 	_build_behavior_section(inner_vbox)
+	_build_instance_vars_section(inner_vbox)
 	call_deferred("_set_header_icon")
+
+# --- Instance variables (n_name) ---------------------------------------------
+var _ivar_list: ItemList
+var _ivar_name: LineEdit
+var _ivar_value: LineEdit
+
+func _build_instance_vars_section(parent: VBoxContainer) -> void:
+	var sep := HSeparator.new()
+	parent.add_child(sep)
+	var lab := Label.new()
+	lab.text = "Instance vars (n_name)"
+	lab.add_theme_font_size_override("font_size", 13)
+	parent.add_child(lab)
+	_ivar_list = ItemList.new()
+	_ivar_list.custom_minimum_size = Vector2(0, 48)
+	parent.add_child(_ivar_list)
+	var row := HBoxContainer.new()
+	parent.add_child(row)
+	_ivar_name = LineEdit.new()
+	_ivar_name.placeholder_text = "name"
+	_ivar_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(_ivar_name)
+	_ivar_value = LineEdit.new()
+	_ivar_value.placeholder_text = "default"
+	_ivar_value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(_ivar_value)
+	var addb := Button.new()
+	addb.text = "Set"
+	addb.pressed.connect(_on_ivar_set)
+	row.add_child(addb)
+	var delb := Button.new()
+	delb.text = "Del"
+	delb.pressed.connect(_on_ivar_del)
+	row.add_child(delb)
+	call_deferred("_refresh_ivars")
+
+func _refresh_ivars() -> void:
+	if _ivar_list == null or node == null:
+		return
+	_ivar_list.clear()
+	if not node.has_meta("flowkit_variables"):
+		return
+	var vars: Dictionary = node.get_meta("flowkit_variables", {})
+	for k in vars.keys():
+		_ivar_list.add_item("%s = %s" % [str(k), str(vars[k])])
+
+func _on_ivar_set() -> void:
+	if node == null or _ivar_name == null:
+		return
+	var n := _ivar_name.text.strip_edges()
+	if n.is_empty() or not n.is_valid_identifier():
+		return
+	var vars: Dictionary = {}
+	if node.has_meta("flowkit_variables"):
+		vars = node.get_meta("flowkit_variables", {}).duplicate(true)
+	var raw := _ivar_value.text if _ivar_value else ""
+	var val: Variant = raw
+	if raw.is_valid_int():
+		val = int(raw)
+	elif raw.is_valid_float():
+		val = float(raw)
+	elif raw.to_lower() in ["true", "false"]:
+		val = raw.to_lower() == "true"
+	vars[n] = val
+	node.set_meta("flowkit_variables", vars)
+	_refresh_ivars()
+	_notify_property_changed()
+
+func _on_ivar_del() -> void:
+	if node == null or _ivar_list == null:
+		return
+	var sel := _ivar_list.get_selected_items()
+	if sel.is_empty():
+		return
+	var text := _ivar_list.get_item_text(sel[0])
+	var key := text.split(" = ")[0]
+	if node.has_meta("flowkit_variables"):
+		var vars: Dictionary = node.get_meta("flowkit_variables", {}).duplicate(true)
+		vars.erase(key)
+		node.set_meta("flowkit_variables", vars)
+	_refresh_ivars()
+	_notify_property_changed()
 
 func _build_behavior_section(parent: VBoxContainer) -> void:
 	behavior_section = VBoxContainer.new()

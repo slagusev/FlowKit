@@ -2,6 +2,35 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.2.0 — Max impact + runtime power + pain providers
+
+### 1 — Maximum impact
+- **Breakpoints** on events (context menu 🔴) — force step mode before actions
+- **Step highlight**: `debug_active_*` on system + event-row yellow modulate + overlay banner
+- **Expression autocomplete** popup (`FKExpressionAutocomplete`)
+- **Action picker categories** (headers by supported type)
+- **Mute UI**: Enabled on action/condition context menus + [OFF] dimming
+- **Sheet JSON** export/import (File menu → `res://flowkit/event_sheets/export_*.json`)
+
+### 2 — Runtime
+- Pick Nodes: **RandomOne**, **InvertFilter**, **MaxCount**
+- **Define Family** / **Pick Family** (`system.families`)
+- **Instance vars** inspector section (`flowkit_variables` / `n_name`)
+- **Run Parallel Subsheets** (fire-and-forget)
+- **Save / Load Sheet State** (`user://flowkit_save_<slot>.json`)
+- **Profiler** top-3 last action µs in debug overlay
+
+### 3 — Architecture / quality
+- `FKSheetJsonIO`, paste controller stub, unit tests for JSON/breakpoint/autocomplete
+- Action timing via `record_profile`
+
+### 4 — Providers (pain points)
+- Multiplayer: On Peer Connected
+- TileMapLayer: Set Cell
+- Set Shader Param (CanvasItem / GeometryInstance3D)
+- Load Resource → system var
+- InputMap Set Action Key
+
 ## 3.1.0 — Roadmap A→G (typed inputs, multi-select, step debug, pick/return, nav/anim)
 
 ### A — Expression typed inputs + behavior param UI

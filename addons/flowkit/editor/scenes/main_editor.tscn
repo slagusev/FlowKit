@@ -70,12 +70,16 @@ script = ExtResource("2_cq0bt")
 
 [node name="File" type="PopupMenu" parent="OuterVBox/TopMargin/TopBar/MenuBar" unique_id=696855516]
 oversampling_override = 1.0
-size = Vector2i(150, 120)
-item_count = 2
+size = Vector2i(180, 180)
+item_count = 4
 item_0/text = "New Event Sheet"
 item_0/id = 0
 item_1/text = "Save Event Sheet"
 item_1/id = 1
+item_2/text = "Export Sheet JSON…"
+item_2/id = 2
+item_3/text = "Import Sheet JSON…"
+item_3/id = 3
 
 [node name="Edit" type="PopupMenu" parent="OuterVBox/TopMargin/TopBar/MenuBar" unique_id=341846292]
 oversampling_override = 1.0
@@ -159,8 +163,10 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 text = "➕ Add Event"
 
+[connection signal="export_json_requested" from="OuterVBox/TopMargin/TopBar/MenuBar" to="." method="_on_export_json"]
 [connection signal="generate_manifest" from="OuterVBox/TopMargin/TopBar/MenuBar" to="." method="_on_generate_manifest"]
 [connection signal="generate_providers" from="OuterVBox/TopMargin/TopBar/MenuBar" to="." method="_on_generate_providers"]
+[connection signal="import_json_requested" from="OuterVBox/TopMargin/TopBar/MenuBar" to="." method="_on_import_json"]
 [connection signal="new_sheet" from="OuterVBox/TopMargin/TopBar/MenuBar" to="." method="_on_new_sheet"]
 [connection signal="redo_requested" from="OuterVBox/TopMargin/TopBar/MenuBar" to="." method="_redo"]
 [connection signal="save_sheet" from="OuterVBox/TopMargin/TopBar/MenuBar" to="." method="_on_save_sheet"]

@@ -15,6 +15,8 @@ class_name FKEventUnit
 @export var trigger_once: bool = false
 ## Fire only on the rising edge of condition pass (once while true).
 @export var once_while_true: bool = false
+## When true, engine enters step mode before running this event's actions.
+@export var breakpoint_enabled: bool = false
 
 ## Runtime-only (not serialized intentionally via @export_storage for save size).
 var _runtime_triggered: bool = false
@@ -61,6 +63,7 @@ func serialize() -> Dictionary:
 		"enabled": enabled,
 		"trigger_once": trigger_once,
 		"once_while_true": once_while_true,
+		"breakpoint_enabled": breakpoint_enabled,
 		"conditions": [],
 		"actions": []
 	}
@@ -83,6 +86,7 @@ func deserialize(dict: Dictionary) -> void:
 	enabled = dict.get("enabled", true)
 	trigger_once = dict.get("trigger_once", false)
 	once_while_true = dict.get("once_while_true", false)
+	breakpoint_enabled = dict.get("breakpoint_enabled", false)
 	_runtime_triggered = false
 	_runtime_was_passing = false
 
@@ -110,6 +114,7 @@ func duplicate_block() -> FKUnit:
 	copy.enabled = enabled
 	copy.trigger_once = trigger_once
 	copy.once_while_true = once_while_true
+	copy.breakpoint_enabled = breakpoint_enabled
 	
 	var duplicated_conds: Array[FKConditionUnit] = ArrayUtils.make_fk_condition_dupes(self.conditions)
 	copy.conditions.clear()

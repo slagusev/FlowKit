@@ -62,8 +62,10 @@ func _update_label() -> void:
 	var node_name := String(_action.target_node).get_file()
 	var params_text := _get_params_text()
 
-	label.text = "%s on %s%s" % [display_name, node_name, params_text]
+	var mute := "" if _action.enabled else " [OFF]"
+	label.text = "%s on %s%s%s" % [display_name, node_name, params_text, mute]
 	name = "%s on %s" % [display_name, node_name]
+	modulate = Color(0.55, 0.55, 0.55) if not _action.enabled else Color.WHITE
 
 var _action: FKActionUnit:
 	get:
@@ -103,17 +105,30 @@ func _get_params_text() -> String:
 # ---------------------------------------------------------
 
 func show_context_menu(global_pos: Vector2) -> void:
-	print("Showing Action context menu")
-	context_menu.position = global_pos
-	context_menu.popup()
+	if context_menu:
+		# Rebuild so Enabled check reflects current state
+		context_menu.clear()
+		context_menu.add_item("Edit", _edit_requested_choice)
+		context_menu.add_check_item("Enabled", _toggle_enabled_choice)
+		var act := get_action()
+		context_menu.set_item_checked(context_menu.get_item_index(_toggle_enabled_choice), act.enabled if act else true)
+		context_menu.add_item("Delete", _delete_requested_choice)
+		context_menu.position = global_pos
+		context_menu.popup()
 
 func _on_context_menu_id_pressed(id: int) -> void:
 	match id:
 		_edit_requested_choice: edit_requested.emit(self)
 		_delete_requested_choice: delete_requested.emit(self)
+		_toggle_enabled_choice:
+			var act := get_action()
+			if act:
+				act.enabled = not act.enabled
+				update_display()
 
 const _edit_requested_choice := 0
 const _delete_requested_choice := 1
+const _toggle_enabled_choice := 2
 
 # ---------------------------------------------------------
 # Input Handling

@@ -131,20 +131,27 @@ func populate_actions(node_path: String, node_class: String) -> void:
 			var action_desc := ""
 			if action.has_method("get_description"):
 				action_desc = str(action.get_description())
-			
+			var cat := "General"
+			if supported_types.size() > 0:
+				cat = str(supported_types[0])
 			_all_items_cache.append({
 				"name": action_name,
 				"id": action_id,
 				"description": action_desc,
+				"category": cat,
 				"metadata": {"id": action_id, "inputs": action.get_inputs()}
 			})
 	
-	# Favorites first, then alphabetical
+	# Favorites first, then category, then alphabetical
 	_all_items_cache.sort_custom(func(a, b):
 		var af: bool = _favorites != null and _favorites.is_action_favorite(str(a.get("id", "")))
 		var bf: bool = _favorites != null and _favorites.is_action_favorite(str(b.get("id", "")))
 		if af != bf:
 			return af
+		var ca := str(a.get("category", ""))
+		var cb := str(b.get("category", ""))
+		if ca != cb:
+			return ca < cb
 		return str(a["name"]).to_lower() < str(b["name"]).to_lower()
 	)
 			
@@ -160,14 +167,21 @@ func _focus_search() -> void:
 func _update_list(filter_text: String = "") -> void:
 	item_list.clear()
 	var filter_lower = filter_text.to_lower().strip_edges()
+	var last_cat := ""
 	
 	for item in _all_items_cache:
 		var haystack := (
 			str(item.get("name", "")) + " " +
 			str(item.get("id", "")) + " " +
+			str(item.get("category", "")) + " " +
 			str(item.get("description", ""))
 		).to_lower()
 		if filter_text.is_empty() or filter_lower in haystack:
+			var cat := str(item.get("category", "General"))
+			if cat != last_cat and filter_text.is_empty():
+				item_list.add_item("— %s —" % cat)
+				item_list.set_item_disabled(item_list.item_count - 1, true)
+				last_cat = cat
 			var star := ""
 			if _favorites and _favorites.is_action_favorite(str(item.get("id", ""))):
 				star = "★ "

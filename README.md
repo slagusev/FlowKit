@@ -15,7 +15,17 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.1 (A→G)
+## What's new in v3.2
+
+| Area | Features |
+|------|----------|
+| **Debugger** | Event **breakpoints** 🔴, step highlight, profiler tops |
+| **Editor** | Expression **autocomplete**, action **categories**, mute UI, **JSON export/import** |
+| **Runtime** | Pick random/invert/max, **families**, parallel subsheets, **save/load state** |
+| **Inspector** | Instance vars (`n_name`) + multi-behaviors |
+| **Providers** | Multiplayer peer, TileMapLayer cell, shader param, load resource, InputMap rebind |
+
+## Earlier — v3.1 (A→G)
 
 | Area | Features |
 |------|----------|
