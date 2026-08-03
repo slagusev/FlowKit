@@ -84,7 +84,11 @@ static func _push_debug_error(from_node: Node, msg: String) -> void:
 	if from_node == null or from_node.get_tree() == null:
 		return
 	var system = from_node.get_tree().root.get_node_or_null("/root/FlowKitSystem")
-	if system and system.has_method("debug_push"):
+	if system == null:
+		return
+	if "last_expr_error" in system:
+		system.last_expr_error = msg
+	if system.has_method("debug_push"):
 		system.debug_push("expr_error", msg)
 
 ## Simple expression cache (string + identity of context class) — cleared never for simplicity

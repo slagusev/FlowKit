@@ -2,6 +2,29 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.13.0 — Runtime depth
+
+### Pick / iterate
+- **Pick Nodes**: `OverlapPath`, `SortBy`, `RandomCount` (+ existing filter/invert/max)
+- **For Each**: cap via `system.for_each_max` (default 512), `for_each_index` variable
+
+### Async
+- **Wait Seconds** / **Wait Frames** (multi-frame actions)
+- Await Signal / Call Subsheet already async — same pattern
+
+### Debug / expressions
+- `system.last_expr_error` + overlay **expr:** line
+- Overlay: pick count/current, top-5 profiler
+
+### Save / multiplayer
+- Save Sheet State **version 2** (slot, scene, saved_at, sheet_uid)
+- Load exposes `last_save_slot/version/scene`
+- **Clear Save Slot** action
+- Conditions: **Is Server**, **Is Multiplayer Authority** (offline = true)
+
+### Tests
+- GUT `test_runtime_3_13.gd`
+
 ## 3.12.0 — Object Mode bridge
 
 ### Pack / recipe API

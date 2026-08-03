@@ -15,7 +15,17 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.12 — Object Mode bridge
+## What's new in v3.13 — Runtime depth
+
+| Feature | How |
+|---------|-----|
+| **Pick** | OverlapPath · SortBy · RandomCount |
+| **Wait** | Wait Seconds / Wait Frames actions |
+| **Debug** | F4 overlay: expr errors, pick summary, perf top-5 |
+| **Save v2** | versioned slots + Clear Save Slot |
+| **MP gates** | Conditions Is Server / Is Multiplayer Authority |
+
+## Earlier — v3.12 Object Mode bridge
 
 | Feature | How |
 |---------|-----|

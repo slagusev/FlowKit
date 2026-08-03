@@ -44,4 +44,11 @@ func execute(node: Node, inputs: Dictionary, block_id: String = "") -> void:
 	if d.get("globals") is Dictionary and "variables" in system:
 		for k in d["globals"].keys():
 			system.variables[k] = d["globals"][k]
+	# v3.13: expose meta for expressions
+	if "variables" in system:
+		system.variables["last_save_slot"] = slot
+		system.variables["last_save_version"] = int(d.get("version", 1))
+		system.variables["last_save_scene"] = str(d.get("scene", ""))
+	if system.has_method("debug_push"):
+		system.debug_push("load", "slot=%s ver=%s" % [slot, str(d.get("version", 1))])
 	print("[FlowKit] Loaded state ← ", path)

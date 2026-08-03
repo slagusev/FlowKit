@@ -140,6 +140,15 @@
 | Promote | Writes On Object Event into scene sheet via FKSheetIO |
 | New packs | hitbox / hurtbox / spawn_pool / state_flags — no sheet format break |
 
+## 3.12 → 3.13
+
+| Change | Action |
+|--------|--------|
+| Pick Nodes inputs | New optional fields — old sheets keep working |
+| Save format | Still JSON; new `version: 2` fields optional on load |
+| New actions/conditions | Regen provider manifest before export tree-shake |
+| for_each_max | Default 512; set `FlowKitSystem.for_each_max = 0` for unlimited |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

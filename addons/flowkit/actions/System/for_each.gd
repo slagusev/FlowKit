@@ -52,16 +52,28 @@ func execute(node: Node, inputs: Dictionary, block_id: String = "") -> void:
 	var matches: Array = []
 	if engine and engine.has_method("find_nodes_for_each"):
 		matches = engine.find_nodes_for_each(root, group_name, class_name_str)
-	
+
+	var max_n: int = 512
+	if system and "for_each_max" in system:
+		max_n = int(system.for_each_max)
+	if max_n > 0 and matches.size() > max_n:
+		if system and system.has_method("debug_push"):
+			system.debug_push("for_each", "capped %d→%d" % [matches.size(), max_n])
+		matches = matches.slice(0, max_n)
+
+	var i := 0
 	for n in matches:
 		if not is_instance_valid(n):
 			continue
 		if system and system.has_method("set_current_node"):
 			system.set_current_node(n)
+		if system and "variables" in system:
+			system.variables["for_each_index"] = i
 		if engine and engine.has_method("run_subsheet"):
 			await engine.run_subsheet(sub_name, root)
-	
+		i += 1
+
 	if system and system.has_method("set_current_node"):
 		system.set_current_node(null)
-	
+
 	exec_completed.emit()

@@ -72,14 +72,22 @@ func _process(_delta: float) -> void:
 		])
 	if "last_cond_fail" in system and str(system.last_cond_fail) != "":
 		lines.append("[color=#ec7063]last fail:[/color] " + str(system.last_cond_fail))
-	# Top profiler entries
+	if "last_expr_error" in system and str(system.last_expr_error) != "":
+		lines.append("[color=#e74c3c]expr:[/color] " + str(system.last_expr_error))
+	# Picked / current summary
+	if "picked_count" in system:
+		var cur_n := ""
+		if "current" in system and system.current is Node and is_instance_valid(system.current):
+			cur_n = str(system.current.name)
+		lines.append("[color=#85c1e9]pick:[/color] %s current=%s" % [str(system.picked_count), cur_n])
+	# Top profiler entries (up to 5)
 	if "profile_stats" in system and system.profile_stats is Dictionary and not system.profile_stats.is_empty():
 		var entries: Array = []
 		for k in system.profile_stats.keys():
 			var st: Dictionary = system.profile_stats[k]
-			entries.append({"id": k, "us": int(st.get("last_us", 0)), "n": int(st.get("count", 0))})
+			entries.append({"id": k, "us": int(st.get("last_us", 0)), "n": int(st.get("count", 0)), "tot": int(st.get("total_us", 0))})
 		entries.sort_custom(func(a, b): return a["us"] > b["us"])
-		var top := mini(3, entries.size())
+		var top := mini(5, entries.size())
 		var bits: PackedStringArray = []
 		for i in range(top):
 			bits.append("%s %dus×%d" % [entries[i]["id"], entries[i]["us"], entries[i]["n"]])

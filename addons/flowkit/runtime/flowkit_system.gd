@@ -45,6 +45,10 @@ var debug_enabled: bool = true
 var debug_log: Array = []  # Array of {t, kind, msg}
 ## Last condition-fail explanation string for overlay.
 var last_cond_fail: String = ""
+## Last expression evaluation error (v3.13).
+var last_expr_error: String = ""
+## Max for_each iterations guard (0 = unlimited).
+var for_each_max: int = 512
 ## Step debugger (F8 toggle, F9 step).
 var debug_step_mode: bool = false
 var debug_step_waiting: bool = false
