@@ -135,9 +135,14 @@ Each pack declares:
 - Local rules editor UI  
 - Object-only demo scene  
 
+### Phase 4 (v3.7)
+
+- Twin-stick pack/recipe, camera follow pack/recipe  
+- Menu demo → object_only  
+
 ### Future packs
 
-Twin-stick, camera follow, rigid thrust, typewriter UI, visual state machine.
+Rigid thrust, typewriter UI, visual state machine, more recipes.
 
 ---
 

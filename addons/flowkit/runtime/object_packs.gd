@@ -145,6 +145,45 @@ static func all_packs() -> Array:
 			],
 			"variables": {},
 			"default_rules": []
+		},
+		{
+			"id": "twin_stick",
+			"name": "Twin-Stick",
+			"description": "Move with WASD/arrows, aim with mouse.",
+			"supported_types": ["CharacterBody2D"],
+			"behavior_ids": ["twin_stick_movement"],
+			"behavior_inputs": {
+				"twin_stick_movement": {
+					"speed": 220.0,
+					"aim_with_mouse": true,
+					"move_up": "ui_up",
+					"move_down": "ui_down",
+					"move_left": "ui_left",
+					"move_right": "ui_right"
+				}
+			},
+			"option_defs": [
+				{"name": "speed", "type": "float", "default": 220.0, "maps_to": "twin_stick_movement.speed"},
+				{"name": "aim_with_mouse", "type": "bool", "default": true, "maps_to": "twin_stick_movement.aim_with_mouse"}
+			],
+			"variables": {},
+			"default_rules": []
+		},
+		{
+			"id": "camera_follow",
+			"name": "Camera Follow",
+			"description": "Camera2D follows first node in a group (default player).",
+			"supported_types": ["Camera2D"],
+			"behavior_ids": ["camera_follow_target"],
+			"behavior_inputs": {
+				"camera_follow_target": {"target_group": "player", "lerp_speed": 5.0}
+			},
+			"option_defs": [
+				{"name": "target_group", "type": "string", "default": "player", "maps_to": "camera_follow_target.target_group"},
+				{"name": "lerp_speed", "type": "float", "default": 5.0, "maps_to": "camera_follow_target.lerp_speed"}
+			],
+			"variables": {},
+			"default_rules": []
 		}
 	]
 

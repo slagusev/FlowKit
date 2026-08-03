@@ -69,6 +69,14 @@
 | Demo | `demos/object_only/` |
 | Manifest | Regen for `enemy_patrol`, `ui_button_action` |
 
+## 3.6 → 3.7
+
+| Change | Action |
+|--------|--------|
+| Twin-stick / camera follow | New packs + recipes |
+| object_menu demo | Start button → object_only |
+| Manifest | Existing twin_stick / camera_follow_target behaviors already in tree |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

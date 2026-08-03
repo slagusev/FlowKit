@@ -81,6 +81,48 @@ static func all_recipes() -> Array:
 			],
 			"groups": ["ui"],
 			"variables": {}
+		},
+		{
+			"id": "twin_stick_player",
+			"name": "Make Twin-Stick Player",
+			"description": "Twin-stick move + aim + Health. Group player.",
+			"supported_types": ["CharacterBody2D"],
+			"packs": [
+				{"id": "twin_stick", "options": {"speed": 240.0, "aim_with_mouse": true}},
+				{"id": "health", "options": {"max_hp": 100.0, "destroy_on_death": false}}
+			],
+			"groups": ["player"],
+			"variables": {"is_player": true}
+		},
+		{
+			"id": "follow_camera",
+			"name": "Make Follow Camera",
+			"description": "Camera2D current + follow group player.",
+			"supported_types": ["Camera2D"],
+			"packs": [
+				{"id": "camera_follow", "options": {"target_group": "player", "lerp_speed": 6.0}}
+			],
+			"groups": ["camera"],
+			"variables": {},
+			"make_current": true
+		},
+		{
+			"id": "start_to_object_only",
+			"name": "Start → Object-Only Demo",
+			"description": "Button loads demos/object_only scene.",
+			"supported_types": ["Button", "BaseButton"],
+			"packs": [
+				{
+					"id": "ui_button",
+					"options": {
+						"message": "Loading game…",
+						"scene_path": "res://addons/flowkit/demos/object_only/object_only.tscn",
+						"subsheet": ""
+					}
+				}
+			],
+			"groups": ["ui"],
+			"variables": {}
 		}
 	]
 
@@ -115,6 +157,8 @@ static func apply_recipe(node: Node, recipe_id: String) -> void:
 	for g in recipe.get("groups", []):
 		if not node.is_in_group(str(g)):
 			node.add_to_group(str(g), true)
+	if bool(recipe.get("make_current", false)) and node is Camera2D:
+		(node as Camera2D).make_current()
 	var vars: Dictionary = {}
 	if node.has_meta("flowkit_variables"):
 		vars = node.get_meta("flowkit_variables", {}).duplicate(true)

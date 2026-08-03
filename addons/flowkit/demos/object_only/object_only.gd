@@ -23,6 +23,7 @@ func _ensure_demo_setup() -> void:
 	var player := get_node_or_null("Player")
 	var coin := get_node_or_null("Coin")
 	var enemy := get_node_or_null("Enemy")
+	var cam := get_node_or_null("Camera2D")
 	if player and not FKObjectConfig.is_pack_enabled(player, "platformer_2d"):
 		FKObjectRecipes.apply_recipe(player, "platformer_player")
 		FKObjectConfig.add_bind(player, "hp", "UI/HPBar", "max_hp")
@@ -30,6 +31,8 @@ func _ensure_demo_setup() -> void:
 		FKObjectRecipes.apply_recipe(coin, "coin")
 	if enemy and not FKObjectConfig.is_pack_enabled(enemy, "enemy_patrol"):
 		FKObjectRecipes.apply_recipe(enemy, "patrol_enemy")
+	if cam and not FKObjectConfig.is_pack_enabled(cam, "camera_follow"):
+		FKObjectRecipes.apply_recipe(cam, "follow_camera")
 	# Re-activate behaviors for runtime (scene already loaded)
 	var engine = get_node_or_null("/root/FlowKit")
 	if engine:

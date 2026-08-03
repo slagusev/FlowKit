@@ -103,3 +103,14 @@ func test_patrol_enemy_recipe():
 	assert_true(body.is_in_group("enemy"))
 	assert_true(FKObjectConfig.is_pack_enabled(body, "enemy_patrol"))
 	assert_true(FKObjectConfig.is_pack_enabled(body, "health"))
+
+func test_twin_stick_and_camera_packs():
+	var body := CharacterBody2D.new()
+	add_child_autofree(body)
+	FKObjectRecipes.apply_recipe(body, "twin_stick_player")
+	assert_true(FKObjectConfig.is_pack_enabled(body, "twin_stick"))
+	var cam := Camera2D.new()
+	add_child_autofree(cam)
+	FKObjectRecipes.apply_recipe(cam, "follow_camera")
+	assert_true(FKObjectConfig.is_pack_enabled(cam, "camera_follow"))
+	assert_true(cam.is_current())

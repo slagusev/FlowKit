@@ -2,6 +2,17 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.7.0 — Object Mode phase 4 (twin-stick, camera, menu→game)
+
+### Packs / recipes
+- **Twin-Stick** pack + *Make Twin-Stick Player*
+- **Camera Follow** pack + *Make Follow Camera* (`make_current`)
+- **Start → Object-Only Demo** button recipe (loads object_only scene)
+
+### Demos
+- `demos/object_menu/` — title screen → Start → object_only
+- object_only adds Camera2D with auto follow-camera recipe
+
 ## 3.6.0 — Object Mode phase 3 (enemy, UI button, rule editor, demo)
 
 ### Packs / behaviors
