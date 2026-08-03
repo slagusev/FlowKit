@@ -338,11 +338,36 @@ func _update_conditions() -> void:
 		conditions_container.remove_child(child)
 		child.queue_free()
 
-	for condition_data in e.conditions:
+	for i in range(e.conditions.size()):
+		var condition_data: FKConditionUnit = e.conditions[i]
+		# Visual OR separator between AND-groups
+		if i > 0 and condition_data and condition_data.or_with_previous:
+			conditions_container.add_child(_make_or_separator())
 		var item: FKConditionUnitUi = CONDITION_ITEM_SCENE.instantiate()
 		item.legitimize(condition_data, _globals)
 		_connect_condition_item_signals(item)
 		conditions_container.add_child(item)
+
+func _make_or_separator() -> Control:
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var line_l := ColorRect.new()
+	line_l.custom_minimum_size = Vector2(24, 1)
+	line_l.color = Color(0.35, 0.65, 0.85, 0.7)
+	line_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var lbl := Label.new()
+	lbl.text = " OR "
+	lbl.add_theme_color_override("font_color", Color(0.45, 0.85, 1.0, 0.95))
+	lbl.add_theme_font_size_override("font_size", 10)
+	var line_r := ColorRect.new()
+	line_r.custom_minimum_size = Vector2(24, 1)
+	line_r.color = Color(0.35, 0.65, 0.85, 0.7)
+	line_r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line_r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(line_l)
+	row.add_child(lbl)
+	row.add_child(line_r)
+	return row
 
 func _get_event_header_display_name(e: FKEventUnit) -> String:
 	var result: String = e.event_id
@@ -411,6 +436,7 @@ func _connect_condition_item_signals(item: FKConditionUnitUi) -> void:
 	item.edit_requested.connect(_on_condition_item_edit)
 	item.delete_requested.connect(_on_condition_item_delete)
 	item.negate_requested.connect(_on_condition_item_negate)
+	item.or_toggle_requested.connect(_on_condition_item_or_toggle)
 	item.reorder_requested.connect(_on_condition_reorder)
 
 func _on_condition_selected(act: FKConditionUnitUi):
@@ -504,6 +530,19 @@ func _on_condition_item_negate(item: FKConditionUnitUi) -> void:
 	if cond_data:
 		cond_data.negated = not cond_data.negated
 		item.update_display()
+		contents_changed.emit(self)
+
+func _on_condition_item_or_toggle(item: FKConditionUnitUi) -> void:
+	before_contents_changed.emit(self)
+	var cond_data = item.get_block()
+	if cond_data:
+		# First condition cannot OR with previous
+		var e := _get_event()
+		if e and e.conditions.size() > 0 and e.conditions[0] == cond_data:
+			cond_data.or_with_previous = false
+		else:
+			cond_data.or_with_previous = not cond_data.or_with_previous
+		_update_conditions()
 		contents_changed.emit(self)
 
 # ---------------------------------------------------------

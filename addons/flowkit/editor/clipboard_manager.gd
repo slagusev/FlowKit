@@ -116,7 +116,8 @@ func _serialize_condition(cond: FKConditionUnit) -> Dictionary:
 		"condition_id": cond.condition_id,
 		"target_node": str(cond.target_node),
 		"inputs": cond.inputs.duplicate(),
-		"negated": cond.negated
+		"negated": cond.negated,
+		"or_with_previous": cond.or_with_previous
 	}
 
 
@@ -213,6 +214,7 @@ func _deserialize_condition(dict: Dictionary) -> FKConditionUnit:
 	cond.target_node = NodePath(dict.get("target_node", ""))
 	cond.inputs = dict.get("inputs", {}).duplicate()
 	cond.negated = dict.get("negated", false)
+	cond.or_with_previous = dict.get("or_with_previous", false)
 	cond.actions = [] as Array[FKActionUnit]  # Always empty for conditions
 	return cond
 

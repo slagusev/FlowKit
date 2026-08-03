@@ -318,25 +318,55 @@ func _make_trigger_callback(block: FKEventUnit, current_root: Node) -> Callable:
 ## Execute a single event block: check all conditions, then run all actions.
 ## Shared by both the poll loop and signal-based trigger callbacks.
 func _execute_block(block: FKEventUnit, current_root: Node) -> void:
-	# Conditions
-	var passed: bool = true
-	for cond in block.conditions:
-		var target := str(cond.target_node)
-		var cnode: Node = _resolve_target(target, current_root)
-		if not cnode:
-			passed = false
-			break
-
-		var cond_result: bool = registry.check_condition(cond.condition_id, cnode, cond.inputs, cond.negated, current_root, block.block_id)
-		if not cond_result:
-			passed = false
-			break
-
-	if not passed:
+	if not _conditions_pass(block.conditions, current_root, block.block_id):
 		return
 
 	# Execute all actions (with branch support, including nested branches)
 	await _execute_actions_list(block.actions, current_root, block.block_id)
+
+## Evaluate event conditions with OR groups:
+## - Conditions with or_with_previous=false start a new AND-group
+## - Subsequent or_with_previous=true conditions join that group as OR
+## - Groups are AND'd together
+## Empty list → pass (same as legacy).
+func _conditions_pass(conditions: Array, current_root: Node, block_id: String) -> bool:
+	if conditions.is_empty():
+		return true
+	
+	# Build OR groups
+	var groups: Array = []  # Array of Array[FKConditionUnit]
+	var current_group: Array = []
+	for cond in conditions:
+		if cond == null:
+			continue
+		if current_group.is_empty() or not cond.or_with_previous:
+			if not current_group.is_empty():
+				groups.append(current_group)
+			current_group = [cond]
+		else:
+			current_group.append(cond)
+	if not current_group.is_empty():
+		groups.append(current_group)
+	
+	# AND of groups; each group is OR of its members
+	for group in groups:
+		var group_passed := false
+		for cond in group:
+			if _check_single_condition(cond, current_root, block_id):
+				group_passed = true
+				break
+		if not group_passed:
+			return false
+	return true
+
+func _check_single_condition(cond: FKConditionUnit, current_root: Node, block_id: String) -> bool:
+	var target := str(cond.target_node)
+	var cnode: Node = _resolve_target(target, current_root)
+	if not cnode:
+		return false
+	return registry.check_condition(
+		cond.condition_id, cnode, cond.inputs, cond.negated, current_root, block_id
+	)
 
 ## Execute a list of actions, handling branch chains via providers.
 ## Used by both _execute_block (top-level actions) and nested branches.

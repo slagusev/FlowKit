@@ -60,8 +60,9 @@ func _update_label_text():
 	var display_name := _get_display_name_from_registry()
 	var params_text := _get_params_text()
 	var neg_prefix := "NOT " if _cond_block.negated else ""
+	var or_prefix := "OR " if _cond_block.or_with_previous else ""
 
-	label.text = "%s%s%s" % [neg_prefix, display_name, params_text]
+	label.text = "%s%s%s%s" % [or_prefix, neg_prefix, display_name, params_text]
 			
 ## If none is found from the registry, this returns the condition's id
 func _get_display_name_from_registry() -> String:
@@ -95,12 +96,20 @@ func _get_params_text() -> String:
 	return params_text
 
 func _update_icon_color():
-	var color = _negated_color if _cond_block.negated \
-	else _pos_color
+	var color: Color
+	if _cond_block.negated:
+		color = _negated_color
+	elif _cond_block.or_with_previous:
+		color = _or_color
+	else:
+		color = _pos_color
 	icon_label.add_theme_color_override("font_color", color)
+	if icon_label:
+		icon_label.text = "◇" if _cond_block.or_with_previous else "◆"
 
 var _negated_color := Color(1.0, 0.4, 0.4, 1)
 var _pos_color := Color(1.0, 0.7, 0.3, 1)
+var _or_color := Color(0.45, 0.85, 1.0, 1)
 
 # ---------------------------------------------------------
 # Context Menu
@@ -112,18 +121,36 @@ func show_context_menu(global_pos: Vector2) -> void:
 	
 	var c := get_block()
 	if c:
+		# Ensure OR menu item exists (for older .tscn without it)
+		_ensure_or_menu_item()
 		context_menu.set_item_checked(2, c.negated)
+		var or_idx := context_menu.get_item_index(3)
+		if or_idx >= 0:
+			context_menu.set_item_checked(or_idx, c.or_with_previous)
 
 	context_menu.position = global_pos
 	context_menu.popup()
+
+func _ensure_or_menu_item() -> void:
+	if not context_menu:
+		return
+	var has_or := false
+	for i in range(context_menu.item_count):
+		if context_menu.get_item_id(i) == 3:
+			has_or = true
+			break
+	if not has_or:
+		context_menu.add_check_item("OR with previous", 3)
 
 func _on_context_menu_id_pressed(id: int) -> void:
 	match id:
 		0: edit_requested.emit(self)
 		1: delete_requested.emit(self)
 		2: negate_requested.emit(self)
+		3: or_toggle_requested.emit(self)
 
 signal negate_requested(node: FKUnitUi)
+signal or_toggle_requested(node: FKUnitUi)
 
 # ---------------------------------------------------------
 # Input Handling

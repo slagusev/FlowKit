@@ -12,7 +12,23 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - This fork: https://github.com/slagusev/FlowKit  
 - Site assets (fork): `website/` in this repo  
 
-## What's different in this fork (2.1)
+## What's different in this fork (2.2)
+
+### OR condition groups
+- Right-click a condition → **OR with previous**
+- Within an OR group any condition may pass; groups are still AND'd
+- Visual `OR` separator between linked conditions
+
+### Sheet filter
+- Filter bar in the FlowKit top bar — matches events, conditions, actions, comments
+
+### 3D & UI providers
+- CharacterBody3D / Node3D / Camera3D / Area3D events & actions
+- UI: visibility, modulate, disable, focus, progress, color, text equals, toggles, mouse enter/exit
+
+---
+
+## Earlier (2.1)
 
 ### Stability
 - Multi-frame actions use **per-invocation wait tokens** (no shared hang flag)
