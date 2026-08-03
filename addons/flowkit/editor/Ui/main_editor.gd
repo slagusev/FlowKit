@@ -281,7 +281,7 @@ func _on_add_subsheet_action(subsheet_index: int) -> void:
 	# First pick any scene node (or System), then choose an action for that type
 	var scene_root := editor_interface.get_edited_scene_root() if editor_interface else null
 	if scene_root:
-		select_node_modal.populate_from_scene(scene_root)
+		select_node_modal.populate_from_scene(scene_root, pending_block_type)
 		_popup_centered_on_editor(select_node_modal)
 	else:
 		pending_node_path = "System"
@@ -320,7 +320,7 @@ func _on_retarget_subsheet_action(subsheet_index: int, action_index: int) -> voi
 	pending_block_type = "subsheet_action_retarget"
 	var scene_root := editor_interface.get_edited_scene_root() if editor_interface else null
 	if scene_root:
-		select_node_modal.populate_from_scene(scene_root)
+		select_node_modal.populate_from_scene(scene_root, pending_block_type)
 		_popup_centered_on_editor(select_node_modal)
 
 func _on_rechoose_subsheet_action(subsheet_index: int, action_index: int) -> void:
@@ -331,7 +331,7 @@ func _on_rechoose_subsheet_action(subsheet_index: int, action_index: int) -> voi
 	pending_block_type = "subsheet_action_rechoose"
 	var scene_root := editor_interface.get_edited_scene_root() if editor_interface else null
 	if scene_root:
-		select_node_modal.populate_from_scene(scene_root)
+		select_node_modal.populate_from_scene(scene_root, pending_block_type)
 		_popup_centered_on_editor(select_node_modal)
 
 func _ensure_dirty_label() -> void:
@@ -1480,7 +1480,7 @@ func _start_add_workflow(block_type: String, target_row: Node = null) -> void:
 	if not scene_root:
 		return
 	
-	select_node_modal.populate_from_scene(scene_root)
+	select_node_modal.populate_from_scene(scene_root, pending_block_type)
 	_popup_centered_on_editor(select_node_modal)
 
 var select_node_modal: FKSelectNodeModal:
@@ -1941,7 +1941,7 @@ func _on_row_replace(signal_row, bound_row: FKEventRowUi) -> void:
 	if not scene_root:
 		return
 	
-	select_node_modal.populate_from_scene(scene_root)
+	select_node_modal.populate_from_scene(scene_root, pending_block_type)
 	_popup_centered_on_editor(select_node_modal)
 
 func _on_row_delete(signal_row, bound_row) -> void:

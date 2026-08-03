@@ -2,6 +2,12 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.10.6 — Select Node: Sprite2D / scene nodes selectable
+
+### Fixed
+- **Select Node** only allowed **System** — scene nodes (Sprite2D, Node2D, …) were hard-disabled when the event-compat list was empty/stale.
+- Providers reloaded on each open; soft-dim instead of `set_item_disabled`; single-click selects.
+
 ## 3.10.5 — Correct hosts: main screen + Sheet dock
 
 ### Architecture (as intended)

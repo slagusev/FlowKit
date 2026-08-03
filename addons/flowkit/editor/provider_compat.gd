@@ -27,16 +27,17 @@ static func is_node_compatible(node_class: String, supported_types: Array) -> bo
 static func providers_from_registry(registry: Variant, kind: String) -> Array:
 	if registry == null:
 		return []
+	# Prefer direct property access — `"prop" in object` is unreliable on some Node types.
 	match kind:
 		"action":
-			return registry.action_providers if "action_providers" in registry else []
+			return registry.action_providers if registry.get("action_providers") != null else []
 		"condition":
-			return registry.condition_providers if "condition_providers" in registry else []
+			return registry.condition_providers if registry.get("condition_providers") != null else []
 		"event":
-			return registry.event_providers if "event_providers" in registry else []
+			return registry.event_providers if registry.get("event_providers") != null else []
 		"behavior":
-			return registry.behavior_providers if "behavior_providers" in registry else []
+			return registry.behavior_providers if registry.get("behavior_providers") != null else []
 		"branch":
-			return registry.branch_providers if "branch_providers" in registry else []
+			return registry.branch_providers if registry.get("branch_providers") != null else []
 		_:
 			return []
