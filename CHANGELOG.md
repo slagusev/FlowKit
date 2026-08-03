@@ -2,6 +2,19 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.6.0 — Object Mode phase 3 (enemy, UI button, rule editor, demo)
+
+### Packs / behaviors
+- **Enemy Patrol** (`enemy_patrol`) — wall flip / optional timed flip
+- **UI Button Action** — press → scene change / subsheet / print
+- Recipes: **Make Patrol Enemy**, **Make Start Button**
+
+### Editor
+- **Local rules editor** in Object Mode (when/then dropdowns, enable, delete, param field)
+
+### Demo
+- `addons/flowkit/demos/object_only/` — player + coin + enemy + HP bar, auto-recipes on run
+
 ## 3.5.0 — Object Mode phase 2 (collectible, recipes, binds)
 
 ### Packs & recipes

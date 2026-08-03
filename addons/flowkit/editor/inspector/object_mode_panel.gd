@@ -89,11 +89,44 @@ func _build_shell() -> void:
 	badd.pressed.connect(_on_add_bind)
 	brow.add_child(badd)
 	
+	var rules_lab := Label.new()
+	rules_lab.text = "Local rules"
+	rules_lab.add_theme_font_size_override("font_size", 12)
+	add_child(rules_lab)
+	_rules_list = VBoxContainer.new()
+	add_child(_rules_list)
+	var rrow := HBoxContainer.new()
+	add_child(rrow)
+	_when_opt = OptionButton.new()
+	for w in WHEN_IDS:
+		_when_opt.add_item(w)
+	rrow.add_child(_when_opt)
+	_then_opt = OptionButton.new()
+	for t in THEN_IDS:
+		_then_opt.add_item(t)
+	rrow.add_child(_then_opt)
+	_rule_param = LineEdit.new()
+	_rule_param.placeholder_text = "param (Amount/Name/Value)"
+	_rule_param.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rrow.add_child(_rule_param)
+	var radd := Button.new()
+	radd.text = "Add rule"
+	radd.pressed.connect(_on_add_rule)
+	rrow.add_child(radd)
+	
 	_rules_label = Label.new()
 	_rules_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_rules_label.add_theme_font_size_override("font_size", 10)
 	_rules_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
 	add_child(_rules_label)
+
+const WHEN_IDS := ["hp_lte_0", "var_lte", "var_gte", "body_in_group_player", "always", "on_ready_once"]
+const THEN_IDS := ["queue_free", "print", "damage_self", "damage_overlapping_player", "add_sheet_var", "call_subsheet", "hide", "show", "set_var"]
+
+var _rules_list: VBoxContainer
+var _when_opt: OptionButton
+var _then_opt: OptionButton
+var _rule_param: LineEdit
 
 
 func _rebuild() -> void:
@@ -118,6 +151,7 @@ func _rebuild() -> void:
 		_pack_checks[pid] = cb
 	_rebuild_options()
 	_rebuild_binds()
+	_rebuild_rules()
 	_refresh_rules_label()
 
 
@@ -278,18 +312,97 @@ func _on_add_bind() -> void:
 	_notify()
 
 
+func _rebuild_rules() -> void:
+	if _rules_list == null:
+		return
+	for c in _rules_list.get_children():
+		c.queue_free()
+	if node == null:
+		return
+	var rules := FKObjectConfig.get_local_rules(node)
+	for i in range(rules.size()):
+		var r = rules[i]
+		if not (r is Dictionary):
+			continue
+		var row := HBoxContainer.new()
+		_rules_list.add_child(row)
+		var en := CheckBox.new()
+		en.button_pressed = bool(r.get("enabled", true))
+		var idx := i
+		en.toggled.connect(func(on: bool):
+			var rs: Array = FKObjectConfig.get_local_rules(node)
+			if idx < rs.size() and rs[idx] is Dictionary:
+				rs[idx]["enabled"] = on
+				FKObjectConfig.set_local_rules(node, rs)
+				_notify()
+		)
+		row.add_child(en)
+		var lab := Label.new()
+		lab.text = "%s → %s %s" % [str(r.get("when", "")), str(r.get("then", "")), str(r.get("params", {}))]
+		lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lab.add_theme_font_size_override("font_size", 10)
+		row.add_child(lab)
+		var del := Button.new()
+		del.text = "×"
+		del.pressed.connect(func():
+			var rs2: Array = FKObjectConfig.get_local_rules(node)
+			if idx >= 0 and idx < rs2.size():
+				rs2.remove_at(idx)
+				FKObjectConfig.set_local_rules(node, rs2)
+			_rebuild_rules()
+			_refresh_rules_label()
+			_notify()
+		)
+		row.add_child(del)
+
+
+func _on_add_rule() -> void:
+	if node == null or _when_opt == null or _then_opt == null:
+		return
+	var when_id: String = _when_opt.get_item_text(_when_opt.selected)
+	var then_id: String = _then_opt.get_item_text(_then_opt.selected)
+	var param_s: String = _rule_param.text.strip_edges() if _rule_param else ""
+	var params: Dictionary = {}
+	if not param_s.is_empty():
+		# "10" → Amount; "score=5" → Name/Value; "death" → Name for subsheet
+		if param_s.is_valid_float():
+			params["Amount"] = float(param_s)
+			params["Value"] = float(param_s)
+		elif "=" in param_s:
+			var parts := param_s.split("=", false, 1)
+			params["Name"] = parts[0].strip_edges()
+			params["Var"] = parts[0].strip_edges()
+			var rhs := parts[1].strip_edges()
+			params["Value"] = float(rhs) if rhs.is_valid_float() else rhs
+		else:
+			params["Name"] = param_s
+			params["Message"] = param_s
+	var rules: Array = FKObjectConfig.get_local_rules(node)
+	var rid := "%s_%s_%d" % [when_id, then_id, rules.size()]
+	rules.append({
+		"id": rid,
+		"enabled": true,
+		"when": when_id,
+		"then": then_id,
+		"params": params,
+		"once": when_id != "body_in_group_player" and when_id != "always"
+	})
+	FKObjectConfig.set_local_rules(node, rules)
+	if _rule_param:
+		_rule_param.clear()
+	_rebuild_rules()
+	_refresh_rules_label()
+	_notify()
+
+
 func _refresh_rules_label() -> void:
 	if _rules_label == null or node == null:
 		return
 	var rules := FKObjectConfig.get_local_rules(node)
 	if rules.is_empty():
-		_rules_label.text = "Local rules: (none)"
+		_rules_label.text = "Tip: param examples — 10 · score=5 · death · Hurt!"
 		return
-	var bits: PackedStringArray = []
-	for r in rules:
-		if r is Dictionary:
-			bits.append("%s → %s" % [str(r.get("when", "")), str(r.get("then", ""))])
-	_rules_label.text = "Local rules: " + ", ".join(bits)
+	_rules_label.text = "%d rule(s). once=false for continuous hazard overlap." % rules.size()
 
 
 func _notify() -> void:

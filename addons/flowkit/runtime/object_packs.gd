@@ -110,6 +110,41 @@ static func all_packs() -> Array:
 			],
 			"variables": {},
 			"default_rules": []
+		},
+		{
+			"id": "enemy_patrol",
+			"name": "Enemy Patrol",
+			"description": "CharacterBody2D walks left/right, flips on wall.",
+			"supported_types": ["CharacterBody2D"],
+			"behavior_ids": ["enemy_patrol"],
+			"behavior_inputs": {
+				"enemy_patrol": {"speed": 80.0, "gravity": 900.0, "flip_on_wall": true, "patrol_time": 0.0}
+			},
+			"option_defs": [
+				{"name": "speed", "type": "float", "default": 80.0, "maps_to": "enemy_patrol.speed"},
+				{"name": "gravity", "type": "float", "default": 900.0, "maps_to": "enemy_patrol.gravity"},
+				{"name": "flip_on_wall", "type": "bool", "default": true, "maps_to": "enemy_patrol.flip_on_wall"},
+				{"name": "patrol_time", "type": "float", "default": 0.0, "maps_to": "enemy_patrol.patrol_time"}
+			],
+			"variables": {"is_enemy": true},
+			"default_rules": []
+		},
+		{
+			"id": "ui_button",
+			"name": "UI Button Action",
+			"description": "On press: change scene and/or call subsheet.",
+			"supported_types": ["BaseButton", "Button"],
+			"behavior_ids": ["ui_button_action"],
+			"behavior_inputs": {
+				"ui_button_action": {"scene_path": "", "subsheet": "", "message": ""}
+			},
+			"option_defs": [
+				{"name": "scene_path", "type": "string", "default": "", "maps_to": "ui_button_action.scene_path"},
+				{"name": "subsheet", "type": "string", "default": "", "maps_to": "ui_button_action.subsheet"},
+				{"name": "message", "type": "string", "default": "", "maps_to": "ui_button_action.message"}
+			],
+			"variables": {},
+			"default_rules": []
 		}
 	]
 

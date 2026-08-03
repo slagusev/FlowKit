@@ -15,25 +15,33 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.5 — Object Mode phase 2
+## What's new in v3.6 — Object Mode phase 3
 
 | Feature | How |
 |---------|-----|
-| **Recipes** | One-click: Platformer Player, Top-Down Player, Coin, Damage Zone |
-| **Collectible** | Area2D pack → +sheet score, free self |
-| **Property binds** | `hp` → ProgressBar path (live) |
-| **More rules** | var thresholds, damage zone overlap, hide/show |
+| **Enemy patrol** | Pack / recipe *Make Patrol Enemy* |
+| **UI button** | Pack / *Make Start Button* → scene or subsheet |
+| **Rule editor** | When/then dropdowns under Object Mode |
+| **Demo** | `demos/object_only/` — no event sheet |
+
+### Object-only demo
+
+Open `addons/flowkit/demos/object_only/object_only.tscn` and run (F5).  
+Recipes auto-apply if missing.
 
 ### Object Mode quick start
 
-1. Select **CharacterBody2D** → Inspector → **Object Mode**
-2. Click **Make Platformer Player** (or enable packs manually)
-3. Select **Area2D** → **Make Coin / Collectible** (player must be in group `player`)
-4. Optional: bind `hp` → `UI/HPBar` for a ProgressBar
+1. **CharacterBody2D** → *Make Platformer Player*
+2. **Area2D** → *Make Coin*
+3. **CharacterBody2D** → *Make Patrol Enemy*
+4. Bind `hp` → ProgressBar path
+5. Optional: add local rules (when/then)
 
 Design: [docs/design/OBJECT_MODE.md](docs/design/OBJECT_MODE.md)
 
-Sheets remain for complex logic; packs and sheets share the same runtime.
+## Earlier — v3.5
+
+Recipes, collectible, property binds, expanded rules.
 
 ## Earlier — v3.4 Object Mode MVP
 

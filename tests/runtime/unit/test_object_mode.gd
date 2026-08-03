@@ -84,3 +84,22 @@ func test_property_bind_updates_range():
 	FKObjectRules.process_node(n, null)
 	assert_eq(bar.value, 40.0)
 	assert_eq(bar.max_value, 100.0)
+
+func test_enemy_patrol_pack():
+	var body := CharacterBody2D.new()
+	add_child_autofree(body)
+	FKObjectPacks.apply_pack(body, "enemy_patrol", {"speed": 50.0})
+	assert_true(FKObjectConfig.is_pack_enabled(body, "enemy_patrol"))
+	var found := false
+	for b in FKBehaviorMeta.get_behaviors(body):
+		if str(b.get("id", "")) == "enemy_patrol":
+			found = true
+	assert_true(found)
+
+func test_patrol_enemy_recipe():
+	var body := CharacterBody2D.new()
+	add_child_autofree(body)
+	FKObjectRecipes.apply_recipe(body, "patrol_enemy")
+	assert_true(body.is_in_group("enemy"))
+	assert_true(FKObjectConfig.is_pack_enabled(body, "enemy_patrol"))
+	assert_true(FKObjectConfig.is_pack_enabled(body, "health"))

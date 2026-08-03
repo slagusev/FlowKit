@@ -129,9 +129,15 @@ Each pack declares:
 | Recipes | platformer_player, topdown_player, coin, damage_zone |
 | Binds | `flowkit_object.binds` → ProgressBar / Label |
 
+### Phase 3 (v3.6)
+
+- Enemy patrol pack/recipe, UI button pack/recipe  
+- Local rules editor UI  
+- Object-only demo scene  
+
 ### Future packs
 
-Enemy patrol, twin-stick, camera follow, UI button→scene, rigid thrust, typewriter UI.
+Twin-stick, camera follow, rigid thrust, typewriter UI, visual state machine.
 
 ---
 

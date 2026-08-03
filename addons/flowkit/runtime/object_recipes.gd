@@ -54,9 +54,33 @@ static func all_recipes() -> Array:
 					"enabled": true,
 					"when": "body_in_group_player",
 					"then": "damage_overlapping_player",
-					"params": {"Amount": 10.0}
+					"params": {"Amount": 10.0},
+					"once": false
 				}
 			]
+		},
+		{
+			"id": "patrol_enemy",
+			"name": "Make Patrol Enemy",
+			"description": "Patrol AI + Health. Group 'enemy'.",
+			"supported_types": ["CharacterBody2D"],
+			"packs": [
+				{"id": "enemy_patrol", "options": {"speed": 90.0}},
+				{"id": "health", "options": {"max_hp": 30.0, "destroy_on_death": true}}
+			],
+			"groups": ["enemy"],
+			"variables": {"is_enemy": true}
+		},
+		{
+			"id": "start_button",
+			"name": "Make Start Button",
+			"description": "Button prints + optional scene path (set in pack options).",
+			"supported_types": ["Button", "BaseButton"],
+			"packs": [
+				{"id": "ui_button", "options": {"message": "Start pressed", "scene_path": "", "subsheet": ""}}
+			],
+			"groups": ["ui"],
+			"variables": {}
 		}
 	]
 

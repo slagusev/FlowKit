@@ -60,6 +60,15 @@
 | Binds | `var` + NodePath to ProgressBar/Label |
 | New behavior | `collectible_pickup` (export manifest regen) |
 
+## 3.5 → 3.6
+
+| Change | Action |
+|--------|--------|
+| Enemy patrol / UI button | New packs + recipes |
+| Local rule editor | Add/enable/delete rules in inspector |
+| Demo | `demos/object_only/` |
+| Manifest | Regen for `enemy_patrol`, `ui_button_action` |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.
