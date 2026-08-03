@@ -29,6 +29,9 @@ var current_sheet_vars: Dictionary = {}
 var current: Node = null
 var current_node: Node = null  # alias
 
+## Active Call Subsheet argument map (p_name in expressions). Cleared when subsheet ends.
+var subsheet_params: Dictionary = {}
+
 # Named callables registered by Define Function / usable via Call Function.
 # Key: function name (String) → Callable
 var functions: Dictionary = {}

@@ -12,8 +12,9 @@ class_name FKEventSheet
 @export var comments: Array[FKComment] = []
 @export var groups: Array[FKGroup] = []
 
-## Sheet-local variable definitions.
+## Sheet-local variable definitions (dict form for .tres compatibility).
 ## Each entry: {"name": String, "type": "int"|"float"|"bool"|"string"|"Variant", "default": Variant}
+## Prefer FKSheetVarDef via sheet_var_defs_to_resources() when editing in code.
 @export var sheet_var_defs: Array[Dictionary] = []
 
 ## Named reusable action lists (subsheets / local functions).
@@ -62,13 +63,41 @@ func get_all_events() -> Array:
 func build_sheet_var_defaults() -> Dictionary:
 	var result: Dictionary = {}
 	for def in sheet_var_defs:
-		if def == null or not (def is Dictionary):
+		if def == null:
 			continue
-		var vname: String = str(def.get("name", "")).strip_edges()
-		if vname.is_empty():
+		if def is FKSheetVarDef:
+			var typed: FKSheetVarDef = def
+			var vname: String = typed.var_name.strip_edges()
+			if vname.is_empty():
+				continue
+			result[vname] = FKSheetVarDef.coerce_default(typed.default_value, typed.var_type)
 			continue
-		result[vname] = _coerce_default(def.get("default", null), str(def.get("type", "Variant")))
+		if not (def is Dictionary):
+			continue
+		var vname2: String = str(def.get("name", "")).strip_edges()
+		if vname2.is_empty():
+			continue
+		result[vname2] = FKSheetVarDef.coerce_default(def.get("default", null), str(def.get("type", "Variant")))
 	return result
+
+## Convert sheet_var_defs dictionaries into typed FKSheetVarDef resources.
+func sheet_var_defs_to_resources() -> Array:
+	var out: Array = []
+	for def in sheet_var_defs:
+		if def is FKSheetVarDef:
+			out.append(def)
+		elif def is Dictionary:
+			out.append(FKSheetVarDef.from_dict(def))
+	return out
+
+## Replace sheet_var_defs from typed resources (stores dict form for .tres stability).
+func set_sheet_var_defs_from_resources(resources: Array) -> void:
+	sheet_var_defs = [] as Array[Dictionary]
+	for r in resources:
+		if r is FKSheetVarDef:
+			sheet_var_defs.append((r as FKSheetVarDef).to_dict())
+		elif r is Dictionary:
+			sheet_var_defs.append(r)
 
 func find_subsheet(sub_name: String):
 	var key := sub_name.strip_edges()
@@ -78,21 +107,7 @@ func find_subsheet(sub_name: String):
 	return null
 
 static func _coerce_default(value: Variant, type_name: String) -> Variant:
-	match type_name:
-		"int":
-			return int(value) if value != null else 0
-		"float":
-			return float(value) if value != null else 0.0
-		"bool":
-			if value is bool:
-				return value
-			if value is String:
-				return value.to_lower() in ["true", "1", "yes"]
-			return bool(value) if value != null else false
-		"string", "String":
-			return str(value) if value != null else ""
-		_:
-			return value
+	return FKSheetVarDef.coerce_default(value, type_name)
 
 func _collect_events_from_groups(groups: Array, out_events: Array) -> void:
 	for group in groups:

@@ -1,10 +1,13 @@
 extends CanvasLayer
 class_name FKDebugOverlay
-## Runtime debug HUD showing recent FlowKit events / expression errors.
+## Runtime debug HUD showing recent FlowKit events / expression errors / sheet vars.
 
 var _panel: PanelContainer
 var _label: RichTextLabel
 var _visible: bool = true
+var _filter: String = ""  # empty = all; otherwise substring of kind or msg
+var _paused: bool = false
+var _last_snapshot: String = ""
 
 func _ready() -> void:
 	layer = 128
@@ -19,8 +22,8 @@ func _build_ui() -> void:
 	_panel.anchor_bottom = 0
 	_panel.offset_left = 8
 	_panel.offset_top = 8
-	_panel.offset_right = 420
-	_panel.offset_bottom = 220
+	_panel.offset_right = 460
+	_panel.offset_bottom = 260
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
 	
@@ -40,16 +43,13 @@ func _build_ui() -> void:
 	_label.bbcode_enabled = true
 	_label.fit_content = false
 	_label.scroll_active = true
-	_label.custom_minimum_size = Vector2(400, 200)
+	_label.custom_minimum_size = Vector2(440, 240)
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(_label)
 
 func _process(_delta: float) -> void:
-	if not _visible or _label == null:
+	if not _visible or _label == null or _paused:
 		return
-	# Toggle with F3
-	if Input.is_action_just_pressed("ui_text_completion_replace"):
-		pass  # reserved
 	var system = get_node_or_null("/root/FlowKitSystem")
 	if system == null or not ("debug_log" in system):
 		_label.text = "[b]FlowKit Debug[/b]\n(no system)"
@@ -58,27 +58,58 @@ func _process(_delta: float) -> void:
 		_panel.visible = false
 		return
 	_panel.visible = true
-	var lines: PackedStringArray = ["[b]FlowKit Debug[/b] [i](F4 hide)[/i]"]
+	var lines: PackedStringArray = [
+		"[b]FlowKit Debug[/b] [i]F4 hide · F6 pause · F7 clear[/i]"
+	]
+	if not _filter.is_empty():
+		lines.append("[color=#888]filter:[/color] %s" % _filter)
 	var log_arr: Array = system.debug_log
-	var start := maxi(0, log_arr.size() - 12)
+	var start := maxi(0, log_arr.size() - 16)
+	var shown := 0
 	for i in range(start, log_arr.size()):
 		var e: Dictionary = log_arr[i]
 		var kind: String = str(e.get("kind", ""))
+		var msg: String = str(e.get("msg", ""))
+		if not _filter.is_empty():
+			var hay := (kind + " " + msg).to_lower()
+			if not (_filter.to_lower() in hay):
+				continue
 		var color := "aaaaaa"
 		match kind:
 			"event": color = "7dcea0"
 			"cond_fail": color = "f5b041"
 			"expr_error": color = "ec7063"
 			"subsheet": color = "5dade2"
-		lines.append("[color=#%s]%s[/color] %s" % [color, kind, str(e.get("msg", ""))])
+			"behavior": color = "bb8fce"
+			"action": color = "85c1e9"
+		var t_ms: int = int(e.get("t", 0))
+		lines.append("[color=#666]%dms[/color] [color=#%s]%s[/color] %s" % [t_ms, color, kind, msg])
+		shown += 1
+	if shown == 0:
+		lines.append("[color=#666](no log entries)[/color]")
 	# Sheet vars snapshot
 	if "current_sheet_vars" in system and system.current_sheet_vars is Dictionary and not system.current_sheet_vars.is_empty():
 		lines.append("[color=#888]vars:[/color] " + str(system.current_sheet_vars))
-	_label.text = "\n".join(lines)
+	if "subsheet_params" in system and system.subsheet_params is Dictionary and not system.subsheet_params.is_empty():
+		lines.append("[color=#888]params:[/color] " + str(system.subsheet_params))
+	if "current" in system and system.current != null:
+		lines.append("[color=#888]current:[/color] " + str(system.current.name if system.current is Node else system.current))
+	_last_snapshot = "\n".join(lines)
+	_label.text = _last_snapshot
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F4:
 			_visible = not _visible
 			_panel.visible = _visible
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_F6:
+			_paused = not _paused
+			if _paused and _label:
+				_label.text = _last_snapshot + "\n[color=#f5b041]PAUSED[/color]"
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_F7:
+			var system = get_node_or_null("/root/FlowKitSystem")
+			if system and "debug_log" in system:
+				system.debug_log.clear()
 			get_viewport().set_input_as_handled()

@@ -910,27 +910,30 @@ func _scan_directory_for_behaviors(path: String, used: Dictionary) -> void:
 	dir.list_dir_end()
 
 
-## Parse a single .tscn file for flowkit_behavior metadata entries.
+## Parse a single .tscn file for flowkit_behavior / flowkit_behaviors metadata entries.
 func _scan_tscn_for_behaviors(tscn_path: String, used: Dictionary) -> void:
 	var file: FileAccess = FileAccess.open(tscn_path, FileAccess.READ)
 	if not file:
 		return
 
+	var id_regex: RegEx = RegEx.new()
+	id_regex.compile('"id"\\s*:\\s*"([^"]+)"')
 	while not file.eof_reached():
 		var line: String = file.get_line()
+		# Multi-behavior and legacy single-slot both embed "id": "..."
 		if "flowkit_behavior" in line:
-			# Next line should contain the behavior id
-			var next_line: String = file.get_line()
-			var regex: RegEx = RegEx.new()
-			regex.compile('"id"\\s*:\\s*"([^"]+)"')
-			var match_result: RegExMatch = regex.search(next_line)
-			if match_result:
-				used.behavior_ids[match_result.get_string(1)] = true
-			else:
-				# id might be on the same line
-				match_result = regex.search(line)
+			var match_here: RegExMatch = id_regex.search(line)
+			if match_here:
+				used.behavior_ids[match_here.get_string(1)] = true
+			for _i in range(8):
+				if file.eof_reached():
+					break
+				var next_line: String = file.get_line()
+				var match_result: RegExMatch = id_regex.search(next_line)
 				if match_result:
 					used.behavior_ids[match_result.get_string(1)] = true
+				if next_line.strip_edges().begins_with("[") and not next_line.contains("flowkit"):
+					break
 	file.close()
 
 

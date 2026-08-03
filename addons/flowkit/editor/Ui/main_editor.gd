@@ -243,23 +243,7 @@ func _on_sheet_filter_changed(new_text: String) -> void:
 				break
 
 func _apply_sheet_filter() -> void:
-	if not blocks_container:
-		return
-	var filter := _sheet_filter_text
-	for child in blocks_container.get_children():
-		if child == empty_label:
-			continue
-		if child is not Control:
-			continue
-		var ctrl := child as Control
-		if filter.is_empty():
-			ctrl.visible = true
-			ctrl.modulate = Color.WHITE
-			continue
-		var haystack := _unit_ui_search_text(child)
-		var match_found := filter in haystack
-		ctrl.visible = match_found
-		ctrl.modulate = Color.WHITE if match_found else Color(1, 1, 1, 0.35)
+	FKMainEditorSheetFilter.apply_filter(blocks_container, empty_label, _sheet_filter_text)
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -270,55 +254,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 
 func _unit_ui_search_text(unit_ui: Node) -> String:
-	var parts: PackedStringArray = []
-	if unit_ui is FKEventRowUi:
-		var e: FKEventUnit = unit_ui.get_block() as FKEventUnit
-		if e:
-			parts.append(e.event_id)
-			parts.append(str(e.target_node))
-			for cond in e.conditions:
-				if cond:
-					parts.append(cond.condition_id)
-					parts.append(str(cond.target_node))
-					for k in cond.inputs:
-						parts.append(str(cond.inputs[k]))
-			for act in e.actions:
-				_collect_action_search(act, parts)
-	elif unit_ui is FKCommentUi:
-		var c = unit_ui.get_block()
-		if c and "text" in c:
-			parts.append(str(c.text))
-	elif unit_ui is FKGroupUi:
-		var g = unit_ui.get_block()
-		if g and "title" in g:
-			parts.append(str(g.title))
-		# Always show groups if any nested match is hard — include title only for now
-		parts.append("group")
-	# Also include visible labels
-	if unit_ui is Control:
-		_collect_label_texts(unit_ui, parts)
-	return " ".join(parts).to_lower()
-
-func _collect_action_search(act: FKActionUnit, parts: PackedStringArray) -> void:
-	if act == null:
-		return
-	parts.append(act.action_id)
-	parts.append(str(act.target_node))
-	for k in act.inputs:
-		parts.append(str(act.inputs[k]))
-	if act.is_branch:
-		parts.append(act.branch_type)
-		parts.append(act.branch_id)
-		if act.branch_condition:
-			parts.append(act.branch_condition.condition_id)
-		for nested in act.branch_actions:
-			_collect_action_search(nested, parts)
-
-func _collect_label_texts(node: Node, parts: PackedStringArray) -> void:
-	if node is Label:
-		parts.append((node as Label).text)
-	for child in node.get_children():
-		_collect_label_texts(child, parts)
+	return FKMainEditorSheetFilter.unit_ui_search_text(unit_ui)
 
 func _ready() -> void:
 	if is_fully_legit:

@@ -203,8 +203,10 @@ func _add_system_snippets() -> void:
 	item_list.add_item("delta")
 	item_list.add_item("current")
 	item_list.add_item("current.global_position")
+	item_list.add_item("system.subsheet_params")
 	# Live sheet variables from editor (if open)
 	_add_sheet_var_snippets()
+	_add_subsheet_param_snippets()
 	item_list.add_item("true")
 	item_list.add_item("false")
 	item_list.add_item("null")
@@ -229,6 +231,23 @@ func _add_sheet_var_snippets() -> void:
 			item_list.add_item("s_" + vname)
 			item_list.add_item(vname)
 
+func _add_subsheet_param_snippets() -> void:
+	if editor_globals == null or not ("sheet_subsheets" in editor_globals):
+		return
+	var any := false
+	for sub in editor_globals.sheet_subsheets:
+		if sub == null or not ("parameters" in sub):
+			continue
+		for p in sub.parameters:
+			if p is Dictionary:
+				var pn: String = str(p.get("name", "")).strip_edges()
+				if pn.is_empty():
+					continue
+				if not any:
+					item_list.add_item("— subsheet params —")
+					any = true
+				item_list.add_item("p_" + pn)
+
 func _add_type_helpers() -> void:
 	item_list.add_item("--- helpers ---")
 	item_list.add_item("true")
@@ -237,6 +256,13 @@ func _add_type_helpers() -> void:
 	item_list.add_item("Vector2(1, 0)")
 	item_list.add_item("Color(1, 1, 1, 1)")
 	item_list.add_item("\"text\"")
+	item_list.add_item("lerpf(a, b, t)")
+	item_list.add_item("move_toward(from, to, delta)")
+	item_list.add_item("randf()")
+	item_list.add_item("randi_range(0, 10)")
+	item_list.add_item("str(value)")
+	item_list.add_item("int(value)")
+	item_list.add_item("float(value)")
 
 var _scene_root: Node:
 	get:

@@ -97,42 +97,17 @@ func _set_desc_panel_style():
 	
 
 func _load_available_conditions() -> void:
-	"""Load all condition scripts from the conditions folder."""
+	"""Load conditions from FKRegistry (no per-modal disk scan)."""
 	available_conditions.clear()
-	var conditions_path: String = "res://addons/flowkit/conditions"
-	_scan_directory_recursive(conditions_path)
-	print("[FKSelectConditionModal]: Loaded ", available_conditions.size(), " conditions")
-
-
-func _scan_directory_recursive(path: String) -> void:
-	"""Recursively scan directories for condition scripts."""
-	var dir: DirAccess = DirAccess.open(path)
-	if not dir:
-		return
-	
-	dir.list_dir_begin()
-	var file_name: String = dir.get_next()
-	
-	while file_name != "":
-		var full_path: String = path + "/" + file_name
-		
-		if dir.current_is_dir() and not file_name.begins_with("."):
-			# Recursively scan subdirectory
-			_scan_directory_recursive(full_path)
-		elif file_name.ends_with(".gd") and not file_name.ends_with(".gd.uid"):
-			var condition_script: Variant = load(full_path)
-			if condition_script:
-				var condition_instance: Variant = condition_script.new()
-				available_conditions.append(condition_instance)
-		
-		file_name = dir.get_next()
-	
-	dir.list_dir_end()
+	if editor_globals and editor_globals.registry:
+		available_conditions = FKProviderCompat.providers_from_registry(editor_globals.registry, "condition")
+	print("[FKSelectConditionModal]: Loaded ", available_conditions.size(), " conditions (registry)")
 
 func populate_conditions(node_path: String, node_class: String) -> void:
 	"""Populate the list with conditions compatible with the selected node."""
 	selected_node_path = node_path
 	selected_node_class = node_class
+	_load_available_conditions()
 	
 	if not item_list:
 		return
@@ -200,24 +175,7 @@ func _on_search_text_changed(new_text: String) -> void:
 	_update_list(new_text)
 
 func _is_node_compatible(node_class: String, supported_types: Array) -> bool:
-	"""Check if a node class is compatible with the supported types."""
-	if supported_types.is_empty():
-		return false
-	
-	# Check for exact match
-	if node_class in supported_types:
-		return true
-	
-	# Check for "Node" which should match all nodes
-	if "Node" in supported_types:
-		return true
-	
-	# Check inheritance
-	for supported_type in supported_types:
-		if ClassDB.is_parent_class(node_class, supported_type):
-			return true
-	
-	return false
+	return FKProviderCompat.is_node_compatible(node_class, supported_types)
 
 func _on_item_activated(index: int) -> void:
 	"""Handle condition selection."""

@@ -36,17 +36,22 @@ func normalize_children(force: bool = false) -> void:
 		var unit: FKUnit = null
 
 		if child is Dictionary:
-			var data: FKUnit = child.get("data")
+			# Legacy { "type": ..., "data": FKUnit }
+			var data = child.get("data")
 			if data is FKUnit:
 				unit = data
 		elif child is FKUnit:
 			unit = child
 
 		if unit:
+			# Nested groups: normalize their children too
+			if unit is FKGroup:
+				(unit as FKGroup).normalize_children(force)
 			normalized.append(unit)
 
 	children.clear()
 	children.append_array(normalized)
+	_is_normalized = true
 
 var _is_normalized := false
 

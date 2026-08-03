@@ -153,12 +153,43 @@ func _build() -> void:
 	adn.pressed.connect(_on_move_sub_action.bind(1))
 	arow.add_child(adn)
 	
+	root.add_child(HSeparator.new())
+	var pl := Label.new()
+	pl.text = "Subsheet parameters (selected)"
+	pl.add_theme_font_size_override("font_size", 12)
+	root.add_child(pl)
+	_param_list = ItemList.new()
+	_param_list.custom_minimum_size = Vector2(0, 56)
+	root.add_child(_param_list)
+	var prow := HBoxContainer.new()
+	root.add_child(prow)
+	_param_name_edit = LineEdit.new()
+	_param_name_edit.placeholder_text = "param name"
+	_param_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	prow.add_child(_param_name_edit)
+	_param_default_edit = LineEdit.new()
+	_param_default_edit.placeholder_text = "default"
+	_param_default_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	prow.add_child(_param_default_edit)
+	var padd := Button.new()
+	padd.text = "Add Param"
+	padd.pressed.connect(_on_add_param)
+	prow.add_child(padd)
+	var pdel := Button.new()
+	pdel.text = "Del"
+	pdel.pressed.connect(_on_del_param)
+	prow.add_child(pdel)
+	
 	var hint := Label.new()
-	hint.text = "Vars: s_name in expressions.\nCall Subsheet / For Each by name."
+	hint.text = "Vars: s_name · Subsheet args: p_name\nCall Subsheet ArgsJson · For Each by name."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_color_override("font_color", Color(0.65, 0.7, 0.75))
 	hint.add_theme_font_size_override("font_size", 10)
 	root.add_child(hint)
+
+var _param_list: ItemList
+var _param_name_edit: LineEdit
+var _param_default_edit: LineEdit
 
 func refresh() -> void:
 	if _vars_list == null or globals == null:
@@ -177,8 +208,15 @@ func refresh() -> void:
 			var ac: int = 0
 			if "actions" in s:
 				ac = s.actions.size()
-			_sub_list.add_item("%s (%d)" % [s.subsheet_name, ac])
+			var pc: int = 0
+			if "parameters" in s and s.parameters is Array:
+				pc = s.parameters.size()
+			var label := "%s (%d)" % [s.subsheet_name, ac]
+			if pc > 0:
+				label += " p:%d" % pc
+			_sub_list.add_item(label)
 	_refresh_sub_actions()
+	_refresh_params()
 
 func _on_var_selected(index: int) -> void:
 	if globals == null or index < 0 or index >= globals.sheet_var_defs.size():
@@ -193,6 +231,58 @@ func _on_var_selected(index: int) -> void:
 func _on_sub_selected(index: int) -> void:
 	_selected_sub_index = index
 	_refresh_sub_actions()
+	_refresh_params()
+
+func _refresh_params() -> void:
+	if _param_list == null:
+		return
+	_param_list.clear()
+	if globals == null or _selected_sub_index < 0 or _selected_sub_index >= globals.sheet_subsheets.size():
+		return
+	var sub = globals.sheet_subsheets[_selected_sub_index]
+	if not ("parameters" in sub):
+		return
+	for p in sub.parameters:
+		if p is Dictionary:
+			_param_list.add_item("%s = %s" % [str(p.get("name", "")), str(p.get("default", ""))])
+
+func _on_add_param() -> void:
+	if globals == null or _selected_sub_index < 0:
+		return
+	var n := _param_name_edit.text.strip_edges() if _param_name_edit else ""
+	if n.is_empty() or not n.is_valid_identifier():
+		return
+	var sub = globals.sheet_subsheets[_selected_sub_index]
+	if not ("parameters" in sub):
+		sub.parameters = [] as Array[Dictionary]
+	var default_val: Variant = _param_default_edit.text if _param_default_edit else ""
+	var found := false
+	for i in range(sub.parameters.size()):
+		var p: Dictionary = sub.parameters[i]
+		if str(p.get("name", "")) == n:
+			sub.parameters[i] = {"name": n, "type": "Variant", "default": default_val}
+			found = true
+			break
+	if not found:
+		sub.parameters.append({"name": n, "type": "Variant", "default": default_val})
+	globals.sheet_dirty = true
+	_param_name_edit.clear()
+	_refresh_params()
+	meta_changed.emit()
+
+func _on_del_param() -> void:
+	if globals == null or _selected_sub_index < 0 or _param_list == null:
+		return
+	var sel := _param_list.get_selected_items()
+	if sel.is_empty():
+		return
+	var sub = globals.sheet_subsheets[_selected_sub_index]
+	var idx: int = sel[0]
+	if idx >= 0 and idx < sub.parameters.size():
+		sub.parameters.remove_at(idx)
+		globals.sheet_dirty = true
+		_refresh_params()
+		meta_changed.emit()
 
 func _refresh_sub_actions() -> void:
 	if _sub_actions_list == null:

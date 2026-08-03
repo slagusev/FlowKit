@@ -2,6 +2,33 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.0.0 — Architecture debt + multi-behavior + subsheet params
+
+### Architecture debt
+- **Registry-backed modals**: action / event / condition / node pickers load providers from `FKRegistry` instead of scanning disk
+- **`FKProviderCompat`**: shared node-type compatibility checks
+- **`FKMainEditorSheetFilter`**: filter matching extracted from `main_editor.gd`
+- **`FKBehaviorMeta`**: multi-behavior node meta (`flowkit_behaviors`) with legacy `flowkit_behavior` mirror
+- **Group normalize**: sets `_is_normalized`, recurses nested groups
+- **`FKSheetVarDef`**: typed sheet-var resource + coerce helpers (`.tres` still stores dicts)
+
+### High priority
+- **Multi-behavior inspector** (list + Add/Remove + params)
+- **Apply Behavior** / **Remove Behavior** runtime actions
+- **Subsheet parameters** (panel + Call Subsheet `ArgsJson` → `p_name` / `system.subsheet_params`)
+- **Await Signal** multi-frame action (optional timeout)
+- **Debug overlay**: F4 hide, F6 pause, F7 clear; timestamps + params/current
+- **Expression helpers**: more math/random snippets, subsheet param list
+
+### Providers
+- Actions: Emit Signal, Set Modulate, Look At Position 3D, Set Progress Value
+- Condition: Compare Subsheet Param
+- Event: On Text Focus Exited
+- Behavior: Drift Velocity (Node2D)
+
+### Website
+- Landing updated for v3.0 feature set
+
 ## 2.9.0 — Large 2D / 3D / UI behaviors & events expansion
 
 ### Behaviors (~31 total)

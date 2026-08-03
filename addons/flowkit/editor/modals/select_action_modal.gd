@@ -103,41 +103,18 @@ func _on_search_submitted(_text: String) -> void:
 		_on_item_activated(index)
 	
 func _load_available_actions() -> void:
-	"""Load all action scripts from the actions folder."""
+	"""Load actions from FKRegistry (no per-modal disk scan)."""
 	available_actions.clear()
-	var actions_path: String = "res://addons/flowkit/actions"
-	_scan_directory_recursive(actions_path)
-	print("[FKSelectActionModal]: Loaded ", available_actions.size(), " actions")
-
-func _scan_directory_recursive(path: String) -> void:
-	"""Recursively scan directories for action scripts."""
-	var dir: DirAccess = DirAccess.open(path)
-	if not dir:
-		return
-	
-	dir.list_dir_begin()
-	var file_name: String = dir.get_next()
-	
-	while file_name != "":
-		var full_path: String = path + "/" + file_name
-		
-		if dir.current_is_dir() and not file_name.begins_with("."):
-			# Recursively scan subdirectory
-			_scan_directory_recursive(full_path)
-		elif file_name.ends_with(".gd") and not file_name.ends_with(".gd.uid"):
-			var action_script: Variant = load(full_path)
-			if action_script:
-				var action_instance: Variant = action_script.new()
-				available_actions.append(action_instance)
-		
-		file_name = dir.get_next()
-	
-	dir.list_dir_end()
+	if editor_globals and editor_globals.registry:
+		available_actions = FKProviderCompat.providers_from_registry(editor_globals.registry, "action")
+	print("[FKSelectActionModal]: Loaded ", available_actions.size(), " actions (registry)")
 
 func populate_actions(node_path: String, node_class: String) -> void:
 	"""Populate the list with actions compatible with the selected node."""
 	selected_node_path = node_path
 	selected_node_class = node_class
+	# Refresh from registry in case providers were regenerated
+	_load_available_actions()
 	
 	if not item_list:
 		return
@@ -213,24 +190,7 @@ func _on_search_text_changed(new_text: String) -> void:
 	_update_list(new_text)
 
 func _is_node_compatible(node_class: String, supported_types: Array) -> bool:
-	"""Check if a node class is compatible with the supported types."""
-	if supported_types.is_empty():
-		return false
-	
-	# Check for exact match
-	if node_class in supported_types:
-		return true
-	
-	# Check for "Node" which should match all nodes
-	if "Node" in supported_types:
-		return true
-	
-	# Check inheritance
-	for supported_type in supported_types:
-		if ClassDB.is_parent_class(node_class, supported_type):
-			return true
-	
-	return false
+	return FKProviderCompat.is_node_compatible(node_class, supported_types)
 
 func _on_item_activated(index: int) -> void:
 	"""Handle action selection."""

@@ -63,7 +63,7 @@
             <span class="badge badge-blue">Godot 4.5+</span>
             <span class="badge badge-green">MIT License</span>
             <span class="badge badge-purple">Open Source Fork</span>
-            <span class="badge badge-blue">v2.7</span>
+            <span class="badge badge-blue">v3.0</span>
           </div>
           <div class="hero-cta">
             <a
@@ -165,8 +165,17 @@
             <div class="feature-icon">📋</div>
             <h3>Sheet Vars &amp; Subsheets</h3>
             <p>
-              Local variables panel, reusable subsheets, Call Subsheet and For
-              Each over groups/classes.
+              Typed sheet vars, reusable subsheets with parameters
+              (<code>p_name</code>, Call Subsheet ArgsJson, For Each +
+              <code>current</code>.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🧩</div>
+            <h3>Multi-Behaviors</h3>
+            <p>
+              Stack multiple behaviors per node (inspector + Apply/Remove
+              Behavior actions). Legacy single-slot meta still loads.
             </p>
           </div>
           <div class="feature-card">
@@ -183,36 +192,35 @@
 
     <section id="whats-new" class="section">
       <div class="container">
-        <h2>What's New in This Fork (v2.7)</h2>
+        <h2>What's New in This Fork (v3.0)</h2>
         <div class="changelog-grid">
           <div class="changelog-card">
-            <h3>Logic &amp; data</h3>
+            <h3>Architecture debt</h3>
             <ul>
-              <li>OR condition groups with visual AND / OR separators</li>
-              <li>Sheet-local variables + Set / Compare actions</li>
-              <li>Subsheets with full action editor, Retarget / Change</li>
-              <li>For Each (group/class) + <code>current</code> in expressions</li>
-              <li>Event flags: Enabled, Trigger Once, Once While True</li>
+              <li>Picker modals load from <strong>FKRegistry</strong> (no disk scan)</li>
+              <li>Shared <code>FKProviderCompat</code> + sheet-filter helper</li>
+              <li>Multi-behavior meta (<code>flowkit_behaviors</code>) + legacy mirror</li>
+              <li>Group children normalize (nested + flag fix)</li>
+              <li>Typed <code>FKSheetVarDef</code> helper API</li>
             </ul>
           </div>
           <div class="changelog-card">
-            <h3>Editor UX</h3>
+            <h3>High priority features</h3>
             <ul>
-              <li>★ Favorites for actions, events, conditions</li>
-              <li>Sheet filter (Ctrl+F) with jump-to-match</li>
-              <li>Dirty indicator; project-local sheet paths</li>
-              <li>Expression live validate + sheet-var snippets</li>
-              <li>Debug overlay (F4) in debug builds</li>
+              <li>Apply / Remove Behavior actions; multi-behavior inspector</li>
+              <li>Subsheet parameters + <code>p_name</code> expressions</li>
+              <li>Await Signal (timeout) multi-frame action</li>
+              <li>Debug overlay: F4 hide · F6 pause · F7 clear</li>
+              <li>Richer expression snippets (lerpf, rand, params…)</li>
             </ul>
           </div>
           <div class="changelog-card">
             <h3>Providers &amp; quality</h3>
             <ul>
-              <li>160+ actions, 50+ conditions, 50+ events (2D / 3D / UI)</li>
-              <li>Provider matrix doc + generator script</li>
-              <li>O(1) provider registry index</li>
-              <li>GitHub Actions GUT CI</li>
-              <li>Stability fixes vs upstream (waits, deep-copy, On Ready)</li>
+              <li>100+ events, 30+ behaviors, large 2D/3D/UI action set</li>
+              <li>Emit Signal, Set Modulate, Look At 3D, Progress value…</li>
+              <li>Provider matrix + GUT CI</li>
+              <li>OR groups, favorites, sheet filter, subsheet editor</li>
             </ul>
           </div>
         </div>

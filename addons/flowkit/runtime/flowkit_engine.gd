@@ -437,7 +437,8 @@ func _execute_actions_list(actions: Array, current_root: Node, block_id: String)
 	await _branch_executor._execute_actions(actions, current_root, block_id)
 
 ## Run a named subsheet's actions (called from Call Subsheet action).
-func run_subsheet(sub_name: String, current_root: Node = null) -> void:
+## optional_args merges over subsheet parameter defaults and is exposed as p_name / system.subsheet_params.
+func run_subsheet(sub_name: String, current_root: Node = null, optional_args: Dictionary = {}) -> void:
 	var entry := _active_entry
 	var sheet: FKEventSheet = entry.get("sheet", null)
 	if sheet == null:
@@ -454,8 +455,24 @@ func run_subsheet(sub_name: String, current_root: Node = null) -> void:
 		push_warning("[FlowKit] Subsheet not found: '%s'" % sub_name)
 		return
 	var root: Node = current_root if current_root else entry.get("root")
-	_debug(root, "subsheet", "Call subsheet '%s'" % sub_name)
+	var system = root.get_tree().root.get_node_or_null("/root/FlowKitSystem") if root and root.get_tree() else null
+	var param_map: Dictionary = {}
+	if sub.has_method("build_param_defaults"):
+		param_map = sub.build_param_defaults()
+	elif "parameters" in sub and sub.parameters is Array:
+		for p in sub.parameters:
+			if p is Dictionary:
+				var pn := str(p.get("name", "")).strip_edges()
+				if not pn.is_empty():
+					param_map[pn] = p.get("default", null)
+	for k in optional_args.keys():
+		param_map[k] = optional_args[k]
+	if system and "subsheet_params" in system:
+		system.subsheet_params = param_map
+	_debug(root, "subsheet", "Call subsheet '%s' params=%s" % [sub_name, str(param_map)])
 	await _execute_actions_list(sub.actions, root, "subsheet_" + sub_name)
+	if system and "subsheet_params" in system:
+		system.subsheet_params = {}
 
 ## Find nodes in scene by group and/or class for For Each.
 func find_nodes_for_each(root: Node, group_name: String, class_name_str: String) -> Array:
@@ -529,30 +546,26 @@ func _scan_and_activate_behaviors(scene_root: Node) -> void:
 	_scan_node_for_behavior(scene_root)
 
 func _scan_node_for_behavior(node: Node) -> void:
-	# Check if this node has a behavior set
-	if node.has_meta("flowkit_behavior"):
-		var behavior_data: Dictionary = node.get_meta("flowkit_behavior", {})
-		var behavior_id: String = behavior_data.get("id", "")
-		var inputs: Dictionary = behavior_data.get("inputs", {})
-		
-		if not behavior_id.is_empty():
-			# Apply the behavior
-			var scene_root = get_tree().current_scene
+	# Multi-behavior meta (+ legacy single-slot) via FKBehaviorMeta
+	var behaviors: Array = FKBehaviorMeta.get_behaviors(node)
+	if not behaviors.is_empty():
+		var scene_root = get_tree().current_scene
+		for behavior_data in behaviors:
+			var behavior_id: String = str(behavior_data.get("id", ""))
+			var inputs: Dictionary = behavior_data.get("inputs", {}) if behavior_data.get("inputs", {}) is Dictionary else {}
+			if behavior_id.is_empty():
+				continue
 			registry.apply_behavior(behavior_id, node, inputs, scene_root)
-			
-			# Track this node for behavior processing
-			if not active_behavior_nodes.has(node):
-				active_behavior_nodes.append(node)
-			
 			print("[FlowKit] Activated behavior '%s' on node: %s" % [behavior_id, node.name])
+		if not active_behavior_nodes.has(node):
+			active_behavior_nodes.append(node)
 	
 	# Recursively scan children
 	for child in node.get_children():
 		_scan_node_for_behavior(child)
 
 func _process_behaviors(delta: float, is_physics: bool) -> void:
-	# Process all active behaviors
-	# First, clean up invalid nodes
+	# Process all active behaviors (multi-slot)
 	var valid_nodes: Array = []
 	for node in active_behavior_nodes:
 		if is_instance_valid(node):
@@ -560,27 +573,28 @@ func _process_behaviors(delta: float, is_physics: bool) -> void:
 	active_behavior_nodes = valid_nodes
 	
 	for node in active_behavior_nodes:
-		if not node.has_meta("flowkit_behavior"):
+		var behaviors: Array = FKBehaviorMeta.get_behaviors(node)
+		if behaviors.is_empty():
 			continue
-		
-		var behavior_data: Dictionary = node.get_meta("flowkit_behavior", {})
-		var behavior_id: String = behavior_data.get("id", "")
-		var inputs: Dictionary = behavior_data.get("inputs", {})
-		
-		if behavior_id.is_empty():
-			continue
-		
-		var behavior: Variant = registry.get_behavior(behavior_id)
-		if not behavior:
-			continue
-		
-		# Call the appropriate process method
-		if is_physics:
-			if behavior.has_method("physics_process"):
-				behavior.physics_process(node, delta, inputs)
-		else:
-			if behavior.has_method("process"):
-				behavior.process(node, delta, inputs)
+		for behavior_data in behaviors:
+			var behavior_id: String = str(behavior_data.get("id", ""))
+			var inputs: Dictionary = behavior_data.get("inputs", {}) if behavior_data.get("inputs", {}) is Dictionary else {}
+			if behavior_id.is_empty():
+				continue
+			var behavior: Variant = registry.get_behavior(behavior_id)
+			if not behavior:
+				continue
+			if is_physics:
+				if behavior.has_method("physics_process"):
+					behavior.physics_process(node, delta, inputs)
+			else:
+				if behavior.has_method("process"):
+					behavior.process(node, delta, inputs)
+
+## Runtime register a node for behavior process loops (used by Apply Behavior action).
+func track_behavior_node(node: Node) -> void:
+	if node and is_instance_valid(node) and not active_behavior_nodes.has(node):
+		active_behavior_nodes.append(node)
 
 func get_class() -> String:
 	return "FlowKitEngine"
