@@ -131,6 +131,15 @@
 | Object events | New providers `emit_object_event` / `on_object_event` — regen manifest before export if you tree-shake |
 | Tools menu | **Project → Tools → FlowKit → Reload Providers** if lists empty |
 
+## 3.11 → 3.12
+
+| Change | Action |
+|--------|--------|
+| Pack API | Optional `register_pack` from project scripts (autoload `_ready`) |
+| Undo recipe | Uses node meta `flowkit_recipe_stack` — safe to ignore |
+| Promote | Writes On Object Event into scene sheet via FKSheetIO |
+| New packs | hitbox / hurtbox / spawn_pool / state_flags — no sheet format break |
+
 ## Breaking risks
 
 - **None intentional** for sheet `.tres` format.

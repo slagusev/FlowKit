@@ -15,7 +15,16 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - Providers: [docs/PROVIDER_MATRIX.md](docs/PROVIDER_MATRIX.md)  
 - Templates: [addons/flowkit/demos/templates/](addons/flowkit/demos/templates/)
 
-## What's new in v3.11 — Power pickers + Object events
+## What's new in v3.12 — Object Mode bridge
+
+| Feature | How |
+|---------|-----|
+| **Register packs/recipes** | `FKObjectPacks.register_pack` · `FKObjectRecipes.register_recipe` |
+| **Undo recipe** | Inspector Object Mode → **Undo last recipe** |
+| **Promote rule → sheet** | Rule row **↗** → On Object Event listener + emit |
+| **Combat packs** | Hitbox 2D · Hurtbox emit died · Spawn pool · State flags |
+
+## Earlier — v3.11 Power pickers + Object events
 
 | Feature | How |
 |---------|-----|

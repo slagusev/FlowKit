@@ -1,9 +1,59 @@
 extends RefCounted
 class_name FKObjectPacks
 ## Declarative Object Mode packs: enable → behaviors + instance vars + optional rules.
+## v3.12: register_pack() for data-driven / extension packs.
+
+## Extra packs registered at runtime (id → definition Dictionary).
+static var _registered: Dictionary = {}
+
+
+## Register or replace a pack definition. Required keys: id, name, supported_types.
+static func register_pack(def: Dictionary) -> bool:
+	var pid := str(def.get("id", "")).strip_edges()
+	if pid.is_empty():
+		push_warning("[FKObjectPacks] register_pack: missing id")
+		return false
+	var copy := def.duplicate(true)
+	if not copy.has("supported_types"):
+		copy["supported_types"] = ["Node"]
+	if not copy.has("behavior_ids"):
+		copy["behavior_ids"] = []
+	if not copy.has("behavior_inputs"):
+		copy["behavior_inputs"] = {}
+	if not copy.has("option_defs"):
+		copy["option_defs"] = []
+	if not copy.has("variables"):
+		copy["variables"] = {}
+	if not copy.has("default_rules"):
+		copy["default_rules"] = []
+	_registered[pid] = copy
+	return true
+
+
+static func unregister_pack(pack_id: String) -> void:
+	_registered.erase(pack_id.strip_edges())
+
+
+static func clear_registered() -> void:
+	_registered.clear()
 
 
 static func all_packs() -> Array:
+	## Built-ins first, then registered (registered override same id).
+	var by_id: Dictionary = {}
+	for p in _builtin_packs():
+		var pid := str(p.get("id", ""))
+		if not pid.is_empty():
+			by_id[pid] = p
+	for pid in _registered.keys():
+		by_id[str(pid)] = _registered[pid]
+	var out: Array = []
+	for pid in by_id.keys():
+		out.append(by_id[pid])
+	return out
+
+
+static func _builtin_packs() -> Array:
 	## Array of pack definition Dictionaries.
 	return [
 		{
@@ -221,12 +271,106 @@ static func all_packs() -> Array:
 			],
 			"variables": {},
 			"default_rules": []
+		},
+		# --- v3.12 combat / spawn packs ---
+		{
+			"id": "hitbox_2d",
+			"name": "Hitbox 2D",
+			"description": "Area2D damages overlapping player (group) each frame while overlapping.",
+			"supported_types": ["Area2D"],
+			"behavior_ids": [],
+			"behavior_inputs": {},
+			"option_defs": [
+				{"name": "damage", "type": "float", "default": 10.0},
+				{"name": "player_group", "type": "string", "default": "player"}
+			],
+			"variables": {"damage": 10.0},
+			"default_rules": [
+				{
+					"id": "hitbox_tick",
+					"enabled": true,
+					"when": "body_in_group_player",
+					"then": "damage_overlapping_player",
+					"params": {"Amount": 10.0, "Group": "player"},
+					"once": false
+				}
+			]
+		},
+		{
+			"id": "hurtbox_emit_died",
+			"name": "Hurtbox / Die Event",
+			"description": "Health + on death emit object event 'died' (sheet listens with On Object Event).",
+			"supported_types": ["Node"],
+			"behavior_ids": [],
+			"behavior_inputs": {},
+			"option_defs": [
+				{"name": "max_hp", "type": "float", "default": 50.0},
+				{"name": "death_event", "type": "string", "default": "died"}
+			],
+			"variables": {"max_hp": 50.0, "hp": 50.0},
+			"default_rules": [
+				{
+					"id": "hurtbox_emit_died",
+					"enabled": true,
+					"when": "hp_lte_0",
+					"then": "emit_object_event",
+					"params": {"Event": "died"},
+					"once": true
+				},
+				{
+					"id": "hurtbox_free",
+					"enabled": true,
+					"when": "hp_lte_0",
+					"then": "queue_free",
+					"params": {},
+					"once": true
+				}
+			]
+		},
+		{
+			"id": "state_flags",
+			"name": "State Flags",
+			"description": "Instance vars: n_state (string) + simple flag bag for sheet expressions.",
+			"supported_types": ["Node"],
+			"behavior_ids": [],
+			"behavior_inputs": {},
+			"option_defs": [
+				{"name": "initial_state", "type": "string", "default": "idle"}
+			],
+			"variables": {"state": "idle", "flag_a": false, "flag_b": false},
+			"default_rules": []
+		},
+		{
+			"id": "spawn_pool",
+			"name": "Spawn Scene (pool)",
+			"description": "On ready once: instance PackedScene path as child (or under parent path).",
+			"supported_types": ["Node"],
+			"behavior_ids": [],
+			"behavior_inputs": {},
+			"option_defs": [
+				{"name": "scene_path", "type": "string", "default": ""},
+				{"name": "count", "type": "int", "default": 1},
+				{"name": "parent_path", "type": "string", "default": ""}
+			],
+			"variables": {"spawn_count": 1},
+			"default_rules": [
+				{
+					"id": "spawn_once",
+					"enabled": true,
+					"when": "on_ready_once",
+					"then": "spawn_scene",
+					"params": {"ScenePath": "", "Count": 1, "ParentPath": ""},
+					"once": true
+				}
+			]
 		}
 	]
 
 
 static func get_pack(pack_id: String) -> Dictionary:
-	for p in all_packs():
+	if _registered.has(pack_id):
+		return (_registered[pack_id] as Dictionary).duplicate(true)
+	for p in _builtin_packs():
 		if str(p.get("id", "")) == pack_id:
 			return p
 	return {}
@@ -272,10 +416,20 @@ static func apply_pack(node: Node, pack_id: String, options: Dictionary = {}) ->
 	var base_vars: Dictionary = pack.get("variables", {})
 	for k in base_vars.keys():
 		vars[k] = base_vars[k]
-	if pack_id == "health":
+	if pack_id == "health" or pack_id == "hurtbox_emit_died":
 		var max_hp := float(opts.get("max_hp", 100.0))
 		vars["max_hp"] = max_hp
 		vars["hp"] = max_hp
+	if pack_id == "state_flags":
+		vars["state"] = str(opts.get("initial_state", "idle"))
+	if pack_id == "spawn_pool":
+		vars["spawn_count"] = int(opts.get("count", 1))
+		vars["spawn_scene"] = str(opts.get("scene_path", ""))
+	if pack_id == "hitbox_2d":
+		vars["damage"] = float(opts.get("damage", 10.0))
+		if node is Area2D:
+			(node as Area2D).monitoring = true
+			(node as Area2D).monitorable = true
 	if pack_id == "collectible":
 		vars["points"] = float(opts.get("points", 1.0))
 		if node is Area2D:
@@ -293,7 +447,27 @@ static func apply_pack(node: Node, pack_id: String, options: Dictionary = {}) ->
 	
 	# Default local rules (merge by id)
 	var rules: Array = FKObjectConfig.get_local_rules(node)
-	var defaults: Array = pack.get("default_rules", [])
+	var defaults: Array = pack.get("default_rules", []).duplicate(true)
+	# Inject option values into rule params
+	if pack_id == "hitbox_2d":
+		for dr in defaults:
+			if dr is Dictionary and str(dr.get("id", "")) == "hitbox_tick":
+				dr["params"] = {
+					"Amount": float(opts.get("damage", 10.0)),
+					"Group": str(opts.get("player_group", "player"))
+				}
+	if pack_id == "hurtbox_emit_died":
+		for dr2 in defaults:
+			if dr2 is Dictionary and str(dr2.get("id", "")) == "hurtbox_emit_died":
+				dr2["params"] = {"Event": str(opts.get("death_event", "died"))}
+	if pack_id == "spawn_pool":
+		for dr3 in defaults:
+			if dr3 is Dictionary and str(dr3.get("id", "")) == "spawn_once":
+				dr3["params"] = {
+					"ScenePath": str(opts.get("scene_path", "")),
+					"Count": int(opts.get("count", 1)),
+					"ParentPath": str(opts.get("parent_path", ""))
+				}
 	if pack_id == "health" and not bool(opts.get("destroy_on_death", true)):
 		defaults = []
 		# Remove death_free if present
@@ -331,6 +505,13 @@ static func remove_pack(node: Node, pack_id: String) -> void:
 			strip_ids[str(dr.get("id", ""))] = true
 	if pack_id == "health":
 		strip_ids["death_free"] = true
+	if pack_id == "hurtbox_emit_died":
+		strip_ids["hurtbox_emit_died"] = true
+		strip_ids["hurtbox_free"] = true
+	if pack_id == "hitbox_2d":
+		strip_ids["hitbox_tick"] = true
+	if pack_id == "spawn_pool":
+		strip_ids["spawn_once"] = true
 	var rules: Array = []
 	for r in FKObjectConfig.get_local_rules(node):
 		if r is Dictionary and strip_ids.has(str(r.get("id", ""))):

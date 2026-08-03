@@ -161,6 +161,31 @@ static func _run_then(node: Node, then_id: String, params: Dictionary, engine: N
 			var system = node.get_tree().root.get_node_or_null("/root/FlowKitSystem") if node.get_tree() else null
 			if system and system.has_method("emit_object_event"):
 				system.emit_object_event(en, node, payload)
+		"spawn_scene":
+			var path := str(params.get("ScenePath", params.get("scene_path", ""))).strip_edges()
+			if path.is_empty() and node.has_meta("flowkit_variables"):
+				var vv = node.get_meta("flowkit_variables")
+				if vv is Dictionary:
+					path = str(vv.get("spawn_scene", ""))
+			if path.is_empty() or not ResourceLoader.exists(path):
+				push_warning("[FKObjectRules] spawn_scene: missing scene " + path)
+				return
+			var count := int(params.get("Count", params.get("count", 1)))
+			count = maxi(count, 1)
+			var parent: Node = node
+			var pp := str(params.get("ParentPath", "")).strip_edges()
+			if not pp.is_empty() and node.get_tree():
+				var pr = node.get_tree().current_scene.get_node_or_null(pp) if node.get_tree().current_scene else null
+				if pr:
+					parent = pr
+			var ps: PackedScene = load(path) as PackedScene
+			if ps == null:
+				return
+			for _i in count:
+				var inst := ps.instantiate()
+				parent.add_child(inst)
+				if inst is Node2D and node is Node2D:
+					(inst as Node2D).global_position = (node as Node2D).global_position
 		_:
 			pass
 	# Mark on_ready_once consumed

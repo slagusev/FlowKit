@@ -2,6 +2,26 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 3.12.0 — Object Mode bridge
+
+### Pack / recipe API
+- `FKObjectPacks.register_pack` / `unregister_pack` / `clear_registered`
+- `FKObjectRecipes.register_recipe` / `undo_last_recipe` / `remove_recipe`
+- Snapshot stack on recipe apply (undo restores packs/behaviors/vars)
+
+### New packs & recipes
+- Packs: **hitbox_2d**, **hurtbox_emit_died**, **state_flags**, **spawn_pool**
+- Recipes: **combat_enemy**, **hazard_hitbox**
+
+### Bridge
+- `FKObjectSheetBridge.promote_rule` + append On Object Event listener to scene sheet
+- Object panel: **Undo last recipe**, **× remove recipe**, rule **↗ promote**
+- Rule then: `emit_object_event`, `spawn_scene` (params from rule field)
+- Object rules: `spawn_scene` instantiates PackedScene
+
+### Tests
+- GUT `test_object_mode_3_12.gd`
+
 ## 3.11.0 — Power pickers, bulk retarget, Object→Sheet events
 
 ### Power-users

@@ -29,7 +29,11 @@ var _sec_binds: VBoxContainer
 var _sec_rules: VBoxContainer
 
 const WHEN_IDS := ["hp_lte_0", "var_lte", "var_gte", "body_in_group_player", "always", "on_ready_once"]
-const THEN_IDS := ["queue_free", "print", "damage_self", "damage_overlapping_player", "add_sheet_var", "call_subsheet", "hide", "show", "set_var"]
+const THEN_IDS := [
+	"queue_free", "print", "damage_self", "damage_overlapping_player",
+	"add_sheet_var", "call_subsheet", "emit_object_event", "spawn_scene",
+	"hide", "show", "set_var"
+]
 
 
 func setup(p_node: Node, p_registry: FKRegistry, p_ei: EditorInterface) -> void:
@@ -133,7 +137,7 @@ func _build_shell() -> void:
 		_then_opt.add_item(t)
 	rrow.add_child(_then_opt)
 	_rule_param = LineEdit.new()
-	_rule_param.placeholder_text = "10 · score=5 · death"
+	_rule_param.placeholder_text = "10 · score=5 · subsheet · died · res://enemy.tscn"
 	_rule_param.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rrow.add_child(_rule_param)
 	var radd := Button.new()
@@ -195,11 +199,29 @@ func _rebuild_recipes() -> void:
 		empty.add_theme_font_size_override("font_size", 10)
 		_recipes_box.add_child(empty)
 		return
+	var undo_row := HBoxContainer.new()
+	_recipes_box.add_child(undo_row)
+	var undo_btn := Button.new()
+	undo_btn.text = "↩ Undo last recipe"
+	undo_btn.tooltip_text = "Restore node snapshot from before last recipe apply"
+	undo_btn.pressed.connect(func():
+		var rid := FKObjectRecipes.undo_last_recipe(node)
+		if rid.is_empty():
+			_set_status("Nothing to undo")
+		else:
+			_set_status("Undid recipe: " + rid)
+			_rebuild()
+			_notify()
+	)
+	undo_row.add_child(undo_btn)
 	for r in recipes:
+		var row := HBoxContainer.new()
+		_recipes_box.add_child(row)
 		var btn := Button.new()
 		btn.text = str(r.get("name", r.get("id", "")))
 		btn.tooltip_text = str(r.get("description", ""))
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var rid: String = str(r.get("id", ""))
 		btn.pressed.connect(func():
 			FKObjectRecipes.apply_recipe(node, rid)
@@ -207,7 +229,17 @@ func _rebuild_recipes() -> void:
 			_rebuild()
 			_notify()
 		)
-		_recipes_box.add_child(btn)
+		row.add_child(btn)
+		var rem := Button.new()
+		rem.text = "×"
+		rem.tooltip_text = "Remove this recipe packs/groups (best-effort)"
+		rem.pressed.connect(func():
+			FKObjectRecipes.remove_recipe(node, rid)
+			_set_status("Removed recipe: " + rid)
+			_rebuild()
+			_notify()
+		)
+		row.add_child(rem)
 
 
 func _on_pack_toggled(on: bool, pack_id: String) -> void:
@@ -378,6 +410,14 @@ func _rebuild_rules() -> void:
 		lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		lab.add_theme_font_size_override("font_size", 10)
 		row.add_child(lab)
+		var promote := Button.new()
+		promote.text = "↗"
+		promote.tooltip_text = "Promote to sheet: ensure emit + On Object Event listener"
+		var rule_copy: Dictionary = (r as Dictionary).duplicate(true)
+		promote.pressed.connect(func():
+			_promote_rule(rule_copy)
+		)
+		row.add_child(promote)
 		var del := Button.new()
 		del.text = "×"
 		del.pressed.connect(func():
@@ -392,6 +432,27 @@ func _rebuild_rules() -> void:
 		row.add_child(del)
 
 
+func _promote_rule(rule: Dictionary) -> void:
+	if node == null or rule.is_empty():
+		return
+	var listener := FKObjectSheetBridge.promote_rule(node, rule, true)
+	var root: Node = null
+	if editor_interface:
+		root = editor_interface.get_edited_scene_root()
+	if root == null and node.get_tree() and node.get_tree().current_scene:
+		root = node.get_tree().current_scene
+	if root == null:
+		root = node.owner if node.owner else node
+	var ok := FKObjectSheetBridge.append_listener_to_scene_sheet(root, listener)
+	if ok:
+		_set_status("Promoted → sheet On Object Event + emit rule")
+	else:
+		_set_status("Promote failed (save sheet?) — emit rule may still be added")
+	_rebuild_rules()
+	_refresh_rules_label()
+	_notify()
+
+
 func _on_add_rule() -> void:
 	if node == null or _when_opt == null or _then_opt == null:
 		return
@@ -400,7 +461,14 @@ func _on_add_rule() -> void:
 	var param_s: String = _rule_param.text.strip_edges() if _rule_param else ""
 	var params: Dictionary = {}
 	if not param_s.is_empty():
-		if param_s.is_valid_float():
+		if then_id == "call_subsheet":
+			params["Name"] = param_s
+		elif then_id == "emit_object_event":
+			params["Event"] = param_s
+		elif then_id == "spawn_scene":
+			params["ScenePath"] = param_s
+			params["Count"] = 1
+		elif param_s.is_valid_float():
 			params["Amount"] = float(param_s)
 			params["Value"] = float(param_s)
 		elif "=" in param_s:
@@ -412,6 +480,7 @@ func _on_add_rule() -> void:
 		else:
 			params["Name"] = param_s
 			params["Message"] = param_s
+			params["Event"] = param_s
 	var rules: Array = FKObjectConfig.get_local_rules(node)
 	var rid := "%s_%s_%d" % [when_id, then_id, rules.size()]
 	rules.append({
