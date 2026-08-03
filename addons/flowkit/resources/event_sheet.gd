@@ -60,37 +60,28 @@ func get_all_events() -> Array:
 	return events
 
 ## Build runtime variable map from definitions (name -> default value).
+## sheet_var_defs is stored as Array[Dictionary] for .tres compatibility;
+## use FKSheetVarDef helpers for coercion / editor conversion.
 func build_sheet_var_defaults() -> Dictionary:
 	var result: Dictionary = {}
 	for def in sheet_var_defs:
-		if def == null:
+		if def == null or not (def is Dictionary):
 			continue
-		if def is FKSheetVarDef:
-			var typed: FKSheetVarDef = def
-			var vname: String = typed.var_name.strip_edges()
-			if vname.is_empty():
-				continue
-			result[vname] = FKSheetVarDef.coerce_default(typed.default_value, typed.var_type)
+		var vname: String = str(def.get("name", "")).strip_edges()
+		if vname.is_empty():
 			continue
-		if not (def is Dictionary):
-			continue
-		var vname2: String = str(def.get("name", "")).strip_edges()
-		if vname2.is_empty():
-			continue
-		result[vname2] = FKSheetVarDef.coerce_default(def.get("default", null), str(def.get("type", "Variant")))
+		result[vname] = FKSheetVarDef.coerce_default(def.get("default", null), str(def.get("type", "Variant")))
 	return result
 
 ## Convert sheet_var_defs dictionaries into typed FKSheetVarDef resources.
 func sheet_var_defs_to_resources() -> Array:
 	var out: Array = []
 	for def in sheet_var_defs:
-		if def is FKSheetVarDef:
-			out.append(def)
-		elif def is Dictionary:
+		if def is Dictionary:
 			out.append(FKSheetVarDef.from_dict(def))
 	return out
 
-## Replace sheet_var_defs from typed resources (stores dict form for .tres stability).
+## Replace sheet_var_defs from typed resources or dicts (always stores dict form).
 func set_sheet_var_defs_from_resources(resources: Array) -> void:
 	sheet_var_defs = [] as Array[Dictionary]
 	for r in resources:
