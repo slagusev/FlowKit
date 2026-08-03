@@ -2,6 +2,24 @@
 
 All notable changes to **slagusev/FlowKit** (not upstream LexianDEV).
 
+## 2.8.0 — More behaviors & events
+
+### Behaviors (+10)
+- 8-Dir Movement, Follow Mouse, Bounce (CharacterBody2D)
+- Rotate Constantly, Bob Up/Down, Look At Mouse (Node2D)
+- Path Follow (PathFollow2D)
+- Camera Follow Target, Screen Shake (Camera2D)
+- Top-Down Movement 3D (CharacterBody3D)
+
+### Events (+20)
+- CharacterBody2D: On Landed / Left Floor / Bumped Wall
+- CharacterBody3D: On Landed
+- VisibleOnScreenNotifier2D entered/exited
+- NavigationAgent2D target/nav finished
+- Particles finished, Path end, Tween finished (meta)
+- HTTPRequest / FileDialog / GUI click / tree / child entered
+- Animation started, RigidBody2D body exited, Area shape entered
+
 ## 2.7.0 — Visual AND/OR groups, subsheet retarget, stricter CI, site update
 
 ### Added

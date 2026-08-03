@@ -12,7 +12,17 @@ Clickteam Fusion 2.5 / Construct–inspired **visual event sheets** for Godot 4.
 - This fork: https://github.com/slagusev/FlowKit  
 - Site assets (fork): `website/` in this repo  
 
-## What's different in this fork (2.7)
+## What's different in this fork (2.8)
+
+### Behaviors (12 total)
+Platformer, top-down, 8-dir, follow mouse, bounce, rotate, bob, look-at-mouse, path follow, camera follow, screen shake, 3D top-down.
+
+### Events (~72)
+Added landed/left floor/wall, screen enter/exit, navigation, particles, HTTP, file dialog, path end, GUI click, tree lifecycle, and more.
+
+---
+
+## Earlier (2.7)
 
 - Visual **AND / OR condition groups** in the sheet UI
 - Subsheet actions: **Retarget** node, **Change** action type
